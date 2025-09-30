@@ -398,7 +398,7 @@ The system has successfully demonstrated empirical self-improvement! 🎉"""
         }
 
         data = {
-            'model': 'xai/grok-beta',  # Free Grok model from xAI
+            'model': 'x-ai/grok-4-fast:free',  # Free Grok-4 Fast model
             'messages': [
                 {
                     'role': 'system',
