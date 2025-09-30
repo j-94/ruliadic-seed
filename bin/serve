@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+import http.server
+import socketserver
+import json
+import subprocess
+import os
+from pathlib import Path
+
+PORT = 8888
+R = Path(__file__).resolve().parent.parent
+
+class VisibilityHandler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(R), **kwargs)
+    
+    def do_GET(self):
+        if self.path == '/api/status':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            try:
+                result = subprocess.run([str(R / 'bin' / 'ping')], 
+                                      capture_output=True, text=True, timeout=5)
+                status = {'output': result.stdout, 'error': result.stderr}
+            except Exception as e:
+                status = {'error': str(e)}
+            
+            self.wfile.write(json.dumps(status).encode())
+            return
+        
+        elif self.path == '/api/doctor':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            try:
+                result = subprocess.run([str(R / 'bin' / 'doctor')], 
+                                      capture_output=True, text=True, timeout=10)
+                status = {'output': result.stdout, 'error': result.stderr}
+            except Exception as e:
+                status = {'error': str(e)}
+            
+            self.wfile.write(json.dumps(status).encode())
+            return
+        
+        super().do_GET()
+
+if __name__ == "__main__":
+    os.chdir(R)
+    with socketserver.TCPServer(("", PORT), VisibilityHandler) as httpd:
+        print(f"Serving visibility dashboard at http://localhost:{PORT}/visibility.html")
+        print(f"API endpoints: /api/status, /api/doctor")
+        httpd.serve_forever()

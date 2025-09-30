@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+set -eu
+DIR="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+ENV="$DIR/.oneengine/ports.env"
+[ -f "$ENV" ] || "$DIR/bin/write_ports" >/dev/null 2>&1 || true
+cmd="${1:-show}"
+case "$cmd" in
+  show) cat "$ENV";;
+  set)
+    target="${2:?usage: ports set HOST:PORT}"; {
+      echo "ENGINE_URL=http://$target"
+      echo "UI_URL=http://$target"
+      grep -vE "^(ENGINE_URL|UI_URL)=" "$ENV" 2>/dev/null || true
+    } > "$ENV.tmp" && mv "$ENV.tmp" "$ENV"
+    echo "updated $ENV → $(grep ENGINE_URL $ENV | cut -d= -f2)"
+    ;;
+  free)
+    target="${2:-$(grep ENGINE_URL "$ENV" | cut -d= -f2 | sed "s#http://##")}"
+    host="${target%:*}"; port="${target##*:}"
+    if command -v nc >/dev/null 2>&1; then
+      if nc -z "$host" "$port" 2>/dev/null; then echo "BUSY $host:$port"; else echo "FREE $host:$port"; fi
+    elif command -v lsof >/dev/null 2>&1; then
+      if lsof -nPiTCP:"$port" -sTCP:LISTEN | grep -q .; then echo "BUSY $host:$port"; else echo "FREE $host:$port"; fi
+    else
+      echo "nc/lsof not found; cannot test"; exit 2
+    fi
+    ;;
+  *) echo "usage: ports {show|set HOST:PORT|free [HOST:PORT]}"; exit 1;;
+esac

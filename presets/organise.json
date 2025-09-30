@@ -1,0 +1,6 @@
+{"contract":{"goal":"Rank receipts + deliverables by relevance","risk":"low",
+ "must_nots":["no real execution"],
+ "io":{"read":["receipts/","deliverables/"],"write":["deliverables/"]},
+ "affordances":["preview"],
+ "acceptance":["machine-checkable"]},
+ "context":{"refs":["receipts/","deliverables/"],"hints":{}}}

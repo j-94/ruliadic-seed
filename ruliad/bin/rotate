@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+OLD="${RULIAD_PASS:-GL2-pass-7b3f9f4c}"
+NEW="${1:-}"; [ -n "$NEW" ] || { echo "usage: bin/rotate NEW_PASSWORD"; exit 2; }
+tmp="$(mktemp)"; openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$OLD" -in .secrets/openrouter.key.enc > "$tmp"
+printf "%s" "$(<"$tmp")" | openssl enc -aes-256-cbc -pbkdf2 -salt -pass pass:"$NEW" -out .secrets/openrouter.key.enc
+rm -f "$tmp"; echo "rotated .secrets/openrouter.key.enc"

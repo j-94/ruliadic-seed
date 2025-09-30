@@ -1,0 +1,327 @@
+{
+  "pattern_id": "agentic",
+  "pattern_name": "Agentic Systems",
+  "version": "1.0.0",
+  "description": "Planner/critic/executor roles with policies as governors for autonomous AI systems",
+  "discovered": "2025-09-30T08:41:00Z",
+  "author": "One Engine Seed",
+  "category": "multi-agent",
+  "maturity_level": "advanced",
+
+  "pattern_characteristics": {
+    "architecture": "role_based_separation",
+    "governance": "policy_driven",
+    "autonomy": "supervised",
+    "coordination": "decentralized",
+    "learning": "continuous"
+  },
+
+  "core_roles": [
+    {
+      "role": "planner",
+      "name": "Task Planner",
+      "description": "Analyzes requirements and creates detailed execution plans",
+      "responsibilities": [
+        "Requirements analysis and decomposition",
+        "Task sequencing and dependency management",
+        "Resource allocation planning",
+        "Risk assessment and mitigation planning"
+      ],
+      "decision_authority": "high",
+      "communication_pattern": "broadcast_to_team"
+    },
+    {
+      "role": "coder",
+      "name": "Code Executor",
+      "description": "Implements solutions based on approved plans",
+      "responsibilities": [
+        "Code generation and implementation",
+        "Following established patterns and conventions",
+        "Adhering to quality standards",
+        "Documentation and testing"
+      ],
+      "decision_authority": "medium",
+      "communication_pattern": "request_approval"
+    },
+    {
+      "role": "critic",
+      "name": "Quality Critic",
+      "description": "Reviews and critiques work for quality, security, and compliance",
+      "responsibilities": [
+        "Code review and quality assessment",
+        "Security vulnerability identification",
+        "Performance and efficiency analysis",
+        "Compliance verification"
+      ],
+      "decision_authority": "high",
+      "communication_pattern": "provide_feedback"
+    },
+    {
+      "role": "executor",
+      "name": "Action Executor",
+      "description": "Executes approved actions and manages side effects",
+      "responsibilities": [
+        "Safe execution of approved changes",
+        "Side effect management and rollback",
+        "Progress tracking and reporting",
+        "Error handling and recovery"
+      ],
+      "decision_authority": "low",
+      "communication_pattern": "report_status"
+    },
+    {
+      "role": "monitor",
+      "name": "System Monitor",
+      "description": "Tracks system health, performance, and compliance",
+      "responsibilities": [
+        "Real-time system health monitoring",
+        "Performance metrics collection",
+        "Compliance and policy adherence checking",
+        "Anomaly detection and alerting"
+      ],
+      "decision_authority": "medium",
+      "communication_pattern": "alert_and_report"
+    }
+  ],
+
+  "governance_policies": [
+    {
+      "policy": "separation_of_duties",
+      "description": "No single role can perform all critical functions",
+      "implementation": "role_based_access_control",
+      "enforcement": "automated_policy_checks"
+    },
+    {
+      "policy": "approval_requirements",
+      "description": "Sensitive operations require multi-role approval",
+      "implementation": "consensus_mechanisms",
+      "enforcement": "signature_verification"
+    },
+    {
+      "policy": "audit_trails",
+      "description": "All decisions and actions are logged with provenance",
+      "implementation": "comprehensive_logging",
+      "enforcement": "immutable_audit_logs"
+    },
+    {
+      "policy": "rollback_capability",
+      "description": "System can rollback failed or unauthorized changes",
+      "implementation": "state_snapshots",
+      "enforcement": "rollback_testing"
+    }
+  ],
+
+  "interaction_patterns": [
+    {
+      "pattern": "proposal_review",
+      "description": "One role proposes, others review and approve/reject",
+      "sequence": ["propose", "review", "feedback", "revise", "approve"],
+      "consensus_required": true,
+      "timeout": "30_minutes"
+    },
+    {
+      "pattern": "escalation",
+      "description": "Unresolved issues escalate to human oversight",
+      "triggers": ["deadlock", "security_concern", "policy_violation"],
+      "escalation_path": ["team_lead", "human_supervisor"],
+      "urgency_levels": ["low", "medium", "high", "critical"]
+    },
+    {
+      "pattern": "collaborative_refinement",
+      "description": "Multiple roles iteratively improve a solution",
+      "sequence": ["draft", "feedback", "iterate", "converge"],
+      "convergence_criteria": "quality_threshold_met",
+      "max_iterations": 5
+    }
+  ],
+
+  "communication_protocols": [
+    {
+      "protocol": "message_passing",
+      "description": "Asynchronous message passing between roles",
+      "reliability": "guaranteed_delivery",
+      "ordering": "causal_ordering",
+      "persistence": "durable_storage"
+    },
+    {
+      "protocol": "shared_state",
+      "description": "Shared state with conflict resolution",
+      "consistency_model": "eventual_consistency",
+      "conflict_resolution": "last_writer_wins",
+      "validation": "schema_enforcement"
+    },
+    {
+      "protocol": "event_streaming",
+      "description": "Real-time event streaming for coordination",
+      "event_types": ["task_started", "task_completed", "approval_required", "error_occurred"],
+      "streaming_format": "SSE_or_WebSocket",
+      "retention_policy": "7_days"
+    }
+  ],
+
+  "autonomy_levels": [
+    {
+      "level": "supervised",
+      "description": "Human oversight required for all decisions",
+      "decision_authority": "human_approval_required",
+      "automation_limit": "information_gathering_only"
+    },
+    {
+      "level": "semi_autonomous",
+      "description": "Can make routine decisions, escalates complex ones",
+      "decision_authority": "routine_decisions_automated",
+      "automation_limit": "reversible_actions_only"
+    },
+    {
+      "level": "autonomous",
+      "description": "Can make most decisions within policy bounds",
+      "decision_authority": "policy_constrained_autonomy",
+      "automation_limit": "irreversible_actions_allowed"
+    }
+  ],
+
+  "learning_mechanisms": [
+    {
+      "mechanism": "experience_accumulation",
+      "description": "Learn from successful and failed executions",
+      "data_sources": ["execution_results", "human_feedback", "error_patterns"],
+      "learning_algorithm": "reinforcement_learning",
+      "update_frequency": "continuous"
+    },
+    {
+      "mechanism": "pattern_recognition",
+      "description": "Identify recurring patterns in tasks and solutions",
+      "data_sources": ["task_descriptions", "solution_patterns", "feedback_loops"],
+      "learning_algorithm": "pattern_matching",
+      "update_frequency": "daily"
+    },
+    {
+      "mechanism": "policy_evolution",
+      "description": "Evolve governance policies based on outcomes",
+      "data_sources": ["policy_effectiveness", "violation_patterns", "performance_impact"],
+      "learning_algorithm": "policy_optimization",
+      "update_frequency": "weekly"
+    }
+  ],
+
+  "implementation_examples": [
+    {
+      "example": "code_review_system",
+      "description": "Multi-agent code review with planner, coder, critic, and executor",
+      "roles_involved": ["planner", "coder", "critic", "executor"],
+      "workflow": "plan → code → review → execute",
+      "governance": "approval_required_for_merge"
+    },
+    {
+      "example": "deployment_pipeline",
+      "description": "Automated deployment with safety checks and rollback",
+      "roles_involved": ["planner", "executor", "monitor"],
+      "workflow": "plan → validate → deploy → monitor",
+      "governance": "rollback_on_failure"
+    },
+    {
+      "example": "security_auditing",
+      "description": "Continuous security monitoring and response",
+      "roles_involved": ["monitor", "critic", "executor"],
+      "workflow": "monitor → analyze → respond",
+      "governance": "immediate_escalation_for_critical_issues"
+    }
+  ],
+
+  "monitoring_and_observability": [
+    {
+      "metric": "role_performance",
+      "description": "Individual role effectiveness and efficiency",
+      "measurement": "task_completion_rate",
+      "thresholds": {"good": ">0.9", "needs_improvement": "<0.7"}
+    },
+    {
+      "metric": "coordination_efficiency",
+      "description": "How well roles coordinate and communicate",
+      "measurement": "message_response_time",
+      "thresholds": {"good": "<5min", "needs_improvement": ">15min"}
+    },
+    {
+      "metric": "policy_compliance",
+      "description": "Adherence to governance policies",
+      "measurement": "policy_violation_rate",
+      "thresholds": {"good": "<0.01", "needs_improvement": ">0.05"}
+    },
+    {
+      "metric": "learning_progress",
+      "description": "System improvement over time",
+      "measurement": "error_rate_trend",
+      "thresholds": {"improving": "negative_trend", "stagnant": "flat_trend"}
+    }
+  ],
+
+  "integration_points": [
+    {
+      "system": "one_engine",
+      "endpoint": "/execute",
+      "configuration": "multi_agent_enabled"
+    },
+    {
+      "system": "meta2_engine",
+      "integration": "governance_layer",
+      "pattern": "policy_enforcement"
+    },
+    {
+      "system": "external_apis",
+      "integration": "service_mesh",
+      "pattern": "service_to_service_communication"
+    }
+  ],
+
+  "success_criteria": [
+    "All roles fulfill their responsibilities effectively",
+    "Governance policies are consistently enforced",
+    "System achieves goals within policy constraints",
+    "Learning and improvement occur over time",
+    "Human oversight is maintained for critical decisions"
+  ],
+
+  "failure_modes": [
+    {
+      "mode": "role_conflict",
+      "description": "Roles disagree on course of action",
+      "detection": "escalation_rate_monitoring",
+      "resolution": "human_arbitration"
+    },
+    {
+      "mode": "policy_drift",
+      "description": "Policies become outdated or ineffective",
+      "detection": "policy_effectiveness_monitoring",
+      "resolution": "policy_review_and_update"
+    },
+    {
+      "mode": "coordination_breakdown",
+      "description": "Roles cannot coordinate effectively",
+      "detection": "communication_latency_monitoring",
+      "resolution": "coordination_protocol_update"
+    }
+  ],
+
+  "evolution_path": [
+    "v1.0: Basic role separation with simple policies",
+    "v1.1: Add learning mechanisms and pattern recognition",
+    "v1.2: Implement sophisticated governance and compliance",
+    "v1.3: Add meta-learning for policy evolution",
+    "v2.0: Full autonomous operation with human oversight"
+  ],
+
+  "related_patterns": [
+    "coged-gen",
+    "map-reduce",
+    "hierarchical_control",
+    "consensus_algorithms",
+    "policy_governance"
+  ],
+
+  "resources": [
+    "tasks/agentic_system.utir.json - Task definitions",
+    "policies/agentic_gates.cel - Governance policies",
+    "bin/agentic - CLI interface",
+    "docs/agentic_guide.md - Implementation guide"
+  ]
+}

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+R="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+PORTS="$R/.oneengine/ports.env"
+[ -f "$PORTS" ] && . "$PORTS"
+URL="${ENGINE_URL:-http://127.0.0.1:7777}"
+
+echo "🤖 Meta² Orchestrator Chat"
+echo "Engine: $URL/orchestrator/chat"
+echo "Type 'quit' to exit, 'help' for commands"
+echo ""
+
+while true; do
+  printf "🧠> "
+  read -r input
+  
+  case "$input" in
+    quit|exit) 
+      echo "Goodbye!"
+      break
+      ;;
+    help)
+      echo "Commands:"
+      echo "  help     - show this help"
+      echo "  ping     - check engine status"
+      echo "  quit     - exit chat"
+      echo "  <text>   - send to orchestrator"
+      ;;
+    ping)
+      "$R/bin/ping"
+      ;;
+    "")
+      continue
+      ;;
+    *)
+      # Try conversation endpoint
+      response=$(curl -s -X POST "$URL/conversation" \
+        -H "Content-Type: application/json" \
+        -d "{\"message\":\"$input\"}" 2>/dev/null || echo "")
+      
+      if [ -n "$response" ]; then
+        if command -v jq >/dev/null 2>&1; then
+          echo "$response" | jq -r '.reply // .response // .message // .'
+        else
+          echo "$response"
+        fi
+      else
+        echo "No response from orchestrator"
+      fi
+      ;;
+  esac
+  echo ""
+done

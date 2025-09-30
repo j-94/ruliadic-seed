@@ -1,0 +1,9 @@
+T1: preview<=apply ; lattice=preview,annotate,apply:fs,apply:net:api.github.com|127.0.0.1
+T2: least-priv ; hosts=api.github.com,127.0.0.1 ; paths=./,receipts/,deliverables/ ; budget=120000
+T3: provenance ; receipts=content-addressed
+T4: contract-measure-select ; kpis=decision_agreement,cost_per_decision,token_ratio,time_to_emergence
+T5: selfmod-as-proposal ; patches=unified-diff
+T6: tau ; schema=single-endpoint
+PRESET fiveline : goal="Distil request into five lines + first direction" affordances=preview read=receipts/,deliverables/ write=deliverables/,receipts/
+PRESET organise : goal="Rank receipts + deliverables by relevance"    affordances=preview read=receipts/,deliverables/ write=deliverables/
+PRESET improve  : goal="Propose patches to improve KPIs"              affordances=preview read=.oneengine/,policies/,presets/,receipts/ write=deliverables/

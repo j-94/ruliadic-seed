@@ -1,0 +1,428 @@
+{
+  "task_id": "codex_agent_v1",
+  "task_name": "Drop-in Codex Agent with Coged-Gen Loop",
+  "version": "1.0.0",
+  "description": "Complete code generation workflow with plan/draft/critique cycle and safety gates",
+  "author": "One Engine Seed",
+  "created": "2025-09-30T08:24:00Z",
+
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string",
+        "description": "The code generation request (e.g., 'Write a Python function to calculate fibonacci numbers')"
+      },
+      "language": {
+        "type": "string",
+        "enum": ["python", "javascript", "typescript", "rust", "go", "java", "cpp", "csharp", "php", "ruby"],
+        "default": "python",
+        "description": "Target programming language"
+      },
+      "project_context": {
+        "type": "object",
+        "properties": {
+          "project_type": {
+            "type": "string",
+            "enum": ["web", "cli", "library", "api", "mobile", "desktop"],
+            "default": "cli"
+          },
+          "framework": {
+            "type": "string",
+            "description": "Framework being used (e.g., 'fastapi', 'express', 'axum')"
+          },
+          "existing_code": {
+            "type": "string",
+            "description": "Existing code for context and consistency"
+          }
+        }
+      },
+      "requirements": {
+        "type": "object",
+        "properties": {
+          "generate_tests": {
+            "type": "boolean",
+            "default": true
+          },
+          "include_documentation": {
+            "type": "boolean",
+            "default": true
+          },
+          "follow_style_guide": {
+            "type": "string",
+            "enum": ["pep8", "eslint", "rustfmt", "gofmt", "standard"],
+            "default": "pep8"
+          },
+          "max_complexity": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "default": "medium"
+          }
+        }
+      },
+      "safety": {
+        "type": "object",
+        "properties": {
+          "allow_network": {
+            "type": "boolean",
+            "default": false
+          },
+          "allow_file_system": {
+            "type": "boolean",
+            "default": true
+          },
+          "require_review": {
+            "type": "boolean",
+            "default": false
+          },
+          "max_risk": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "default": "low"
+          }
+        }
+      }
+    },
+    "required": ["prompt"]
+  },
+
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "run_id": {
+        "type": "string",
+        "description": "Unique identifier for this execution"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["completed", "review_required", "blocked", "failed"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Generated code content"
+          },
+          "explanation": {
+            "type": "string",
+            "description": "Explanation of what the code does and why"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "content": { "type": "string" },
+                "type": { "type": "string", "enum": ["implementation", "test", "config", "documentation"] }
+              }
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "installation_commands": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "safety_check": {
+        "type": "object",
+        "properties": {
+          "passed": { "type": "boolean" },
+          "risk_level": { "type": "string", "enum": ["low", "medium", "high"] },
+          "concerns": { "type": "array", "items": { "type": "string" } },
+          "approvals_required": { "type": "boolean" }
+        }
+      },
+      "coged_gen": {
+        "type": "object",
+        "properties": {
+          "plan": { "type": "string" },
+          "draft": { "type": "string" },
+          "critique": { "type": "string" },
+          "refined": { "type": "string" }
+        }
+      }
+    }
+  },
+
+  "execution_workflow": {
+    "steps": [
+      {
+        "step_id": "analyze_requirements",
+        "step_name": "Analyze Requirements",
+        "description": "Analyze the user's prompt and extract requirements",
+        "handler": "requirements_analyzer",
+        "input_mapping": {
+          "prompt": "input.prompt",
+          "language": "input.language",
+          "project_context": "input.project_context"
+        },
+        "output_mapping": {
+          "requirements": "context.requirements",
+          "constraints": "context.constraints",
+          "complexity_score": "context.complexity_score"
+        },
+        "timeout_seconds": 30,
+        "retry_count": 2
+      },
+      {
+        "step_id": "plan_approach",
+        "step_name": "Plan Implementation Approach",
+        "description": "Create a detailed plan for implementing the solution",
+        "handler": "planner",
+        "input_mapping": {
+          "requirements": "context.requirements",
+          "constraints": "context.constraints",
+          "language": "input.language",
+          "project_type": "input.project_context.project_type"
+        },
+        "output_mapping": {
+          "plan": "context.implementation_plan",
+          "architecture": "context.architecture_decision",
+          "file_structure": "context.proposed_files"
+        },
+        "timeout_seconds": 45,
+        "retry_count": 2,
+        "gates": ["freshness_gate", "evidence_gate"]
+      },
+      {
+        "step_id": "draft_solution",
+        "step_name": "Draft Initial Solution",
+        "description": "Generate the initial code solution based on the plan",
+        "handler": "code_generator",
+        "input_mapping": {
+          "plan": "context.implementation_plan",
+          "requirements": "context.requirements",
+          "language": "input.language",
+          "style_guide": "input.requirements.follow_style_guide"
+        },
+        "output_mapping": {
+          "draft_code": "context.draft_code",
+          "draft_files": "context.draft_files",
+          "draft_explanation": "context.draft_explanation"
+        },
+        "timeout_seconds": 60,
+        "retry_count": 3,
+        "gates": ["caps_gate", "ask_act_gate"]
+      },
+      {
+        "step_id": "critique_solution",
+        "step_name": "Critique and Review",
+        "description": "Review the draft for issues, improvements, and compliance",
+        "handler": "code_critic",
+        "input_mapping": {
+          "draft_code": "context.draft_code",
+          "requirements": "context.requirements",
+          "style_guide": "input.requirements.follow_style_guide",
+          "max_complexity": "input.requirements.max_complexity"
+        },
+        "output_mapping": {
+          "critique": "context.critique_results",
+          "issues": "context.identified_issues",
+          "improvements": "context.suggested_improvements",
+          "quality_score": "context.quality_score"
+        },
+        "timeout_seconds": 45,
+        "retry_count": 2,
+        "gates": ["evidence_gate"]
+      },
+      {
+        "step_id": "refine_solution",
+        "step_name": "Refine and Optimize",
+        "description": "Apply improvements and optimizations based on critique",
+        "handler": "code_refiner",
+        "input_mapping": {
+          "draft_code": "context.draft_code",
+          "critique": "context.critique_results",
+          "improvements": "context.suggested_improvements",
+          "requirements": "context.requirements"
+        },
+        "output_mapping": {
+          "refined_code": "context.refined_code",
+          "refined_files": "context.refined_files",
+          "refined_explanation": "context.refined_explanation"
+        },
+        "timeout_seconds": 60,
+        "retry_count": 3,
+        "gates": ["caps_gate", "ask_act_gate"]
+      },
+      {
+        "step_id": "safety_validation",
+        "step_name": "Safety and Quality Gates",
+        "description": "Apply safety checks and quality validation",
+        "handler": "safety_validator",
+        "input_mapping": {
+          "code": "context.refined_code",
+          "safety_requirements": "input.safety",
+          "quality_requirements": "input.requirements"
+        },
+        "output_mapping": {
+          "safety_passed": "context.safety_passed",
+          "risk_level": "context.risk_level",
+          "concerns": "context.safety_concerns",
+          "approvals_required": "context.approvals_required"
+        },
+        "timeout_seconds": 30,
+        "retry_count": 1,
+        "gates": ["caps_gate"]
+      },
+      {
+        "step_id": "generate_tests",
+        "step_name": "Generate Tests",
+        "description": "Generate comprehensive tests for the solution",
+        "handler": "test_generator",
+        "input_mapping": {
+          "code": "context.refined_code",
+          "language": "input.language",
+          "requirements": "context.requirements"
+        },
+        "output_mapping": {
+          "test_files": "context.test_files",
+          "test_explanation": "context.test_explanation"
+        },
+        "timeout_seconds": 45,
+        "retry_count": 2,
+        "condition": "input.requirements.generate_tests == true"
+      },
+      {
+        "step_id": "generate_documentation",
+        "step_name": "Generate Documentation",
+        "description": "Generate documentation for the solution",
+        "handler": "documentation_generator",
+        "input_mapping": {
+          "code": "context.refined_code",
+          "requirements": "context.requirements"
+        },
+        "output_mapping": {
+          "documentation": "context.documentation",
+          "readme_content": "context.readme_content"
+        },
+        "timeout_seconds": 30,
+        "retry_count": 2,
+        "condition": "input.requirements.include_documentation == true"
+      },
+      {
+        "step_id": "package_deliverables",
+        "step_name": "Package Final Deliverables",
+        "description": "Package all generated files and metadata",
+        "handler": "deliverable_packager",
+        "input_mapping": {
+          "code": "context.refined_code",
+          "files": "context.refined_files",
+          "tests": "context.test_files",
+          "documentation": "context.documentation",
+          "explanation": "context.refined_explanation"
+        },
+        "output_mapping": {
+          "final_files": "output.result.files",
+          "dependencies": "output.result.dependencies",
+          "installation_commands": "output.result.installation_commands"
+        },
+        "timeout_seconds": 15,
+        "retry_count": 1
+      }
+    ],
+
+    "error_handling": {
+      "max_retries": 3,
+      "backoff_strategy": "exponential",
+      "fallback_handlers": {
+        "network_error": "retry_with_backoff",
+        "rate_limit": "wait_and_retry",
+        "parse_error": "fix_and_retry",
+        "safety_block": "require_human_approval"
+      }
+    },
+
+    "gates": {
+      "ask_act_gate": "context.requirements_understood == true && context.safety_constraints_met == true",
+      "evidence_gate": "context.supporting_evidence_gathered == true || context.uncertainty_level == 'low'",
+      "caps_gate": "context.sensitive_operations == false || (context.sensitive_operations == true && context.human_approval_granted == true)",
+      "freshness_gate": "context.context_is_current == true || context.context_refreshed == true"
+    }
+  },
+
+  "handlers": {
+    "requirements_analyzer": {
+      "type": "llm_chain",
+      "model": "gpt-4o-mini",
+      "temperature": 0.1,
+      "prompt_template": "Analyze the following code generation request and extract key requirements, constraints, and complexity factors:\n\nPrompt: {prompt}\nLanguage: {language}\nProject Context: {project_context}\n\nReturn a structured analysis including:\n1. Core requirements\n2. Technical constraints\n3. Complexity assessment\n4. Risk factors\n5. Dependencies needed"
+    },
+
+    "planner": {
+      "type": "llm_chain",
+      "model": "gpt-4o-mini",
+      "temperature": 0.2,
+      "prompt_template": "Create a detailed implementation plan for the following requirements:\n\nRequirements: {requirements}\nConstraints: {constraints}\nLanguage: {language}\nProject Type: {project_type}\n\nProvide:\n1. High-level architecture approach\n2. File structure and organization\n3. Key algorithms or patterns to use\n4. Integration points\n5. Testing strategy\n6. Documentation needs"
+    },
+
+    "code_generator": {
+      "type": "llm_chain",
+      "model": "gpt-4o-mini",
+      "temperature": 0.3,
+      "prompt_template": "Generate code based on the following plan:\n\nPlan: {plan}\nRequirements: {requirements}\nLanguage: {language}\nStyle Guide: {style_guide}\n\nGenerate clean, well-structured, and documented code that follows best practices for the specified language and style guide."
+    },
+
+    "code_critic": {
+      "type": "llm_chain",
+      "model": "gpt-4o-mini",
+      "temperature": 0.1,
+      "prompt_template": "Review the following code for issues, improvements, and compliance:\n\nCode: {draft_code}\nRequirements: {requirements}\nStyle Guide: {style_guide}\nMax Complexity: {max_complexity}\n\nProvide:\n1. Code quality assessment\n2. Identified issues or bugs\n3. Performance improvements\n4. Style guide compliance\n5. Security considerations\n6. Test coverage suggestions"
+    },
+
+    "code_refiner": {
+      "type": "llm_chain",
+      "model": "gpt-4o-mini",
+      "temperature": 0.2,
+      "prompt_template": "Refine the code based on the critique:\n\nOriginal Code: {draft_code}\nCritique: {critique}\nImprovements: {improvements}\nRequirements: {requirements}\n\nApply the suggested improvements while maintaining the original functionality and intent."
+    },
+
+    "safety_validator": {
+      "type": "llm_chain",
+      "model": "gpt-4o-mini",
+      "temperature": 0.0,
+      "prompt_template": "Validate the code for safety and compliance:\n\nCode: {code}\nSafety Requirements: {safety_requirements}\nQuality Requirements: {quality_requirements}\n\nCheck for:\n1. Network access violations\n2. File system access violations\n3. Code injection vulnerabilities\n4. Infinite loop potential\n5. Resource exhaustion risks\n6. Compliance with safety requirements"
+    },
+
+    "test_generator": {
+      "type": "llm_chain",
+      "model": "gpt-4o-mini",
+      "temperature": 0.2,
+      "prompt_template": "Generate comprehensive tests for the following code:\n\nCode: {code}\nLanguage: {language}\nRequirements: {requirements}\n\nGenerate unit tests, integration tests, and edge case tests that provide good coverage."
+    },
+
+    "documentation_generator": {
+      "type": "llm_chain",
+      "model": "gpt-4o-mini",
+      "temperature": 0.3,
+      "prompt_template": "Generate documentation for the following code:\n\nCode: {code}\nRequirements: {requirements}\n\nCreate clear, comprehensive documentation including usage examples, API reference, and setup instructions."
+    },
+
+    "deliverable_packager": {
+      "type": "script",
+      "script": "# Package all deliverables into structured output\\nfiles = []\\nif context.refined_files:\\n    files.extend(context.refined_files)\\nif context.test_files:\\n    files.extend(context.test_files)\\nif context.documentation:\\n    files.append({\\n        \\\"name\\\": \\\"README.md\\\",\\n        \\\"content\\\": context.documentation,\\n        \\\"type\\\": \\\"documentation\\\"\\n    })\\n\\nreturn {\\n    \\\"files\\\": files,\\n    \\\"dependencies\\\": extract_dependencies(context.refined_code),\\n    \\\"installation_commands\\\": generate_install_commands(files)\\n}"
+    }
+  },
+
+  "metadata": {
+    "estimated_cost_usd": 0.02,
+    "estimated_duration_seconds": 300,
+    "complexity_level": "medium",
+    "risk_level": "low",
+    "tags": ["code-generation", "codex", "coged-gen", "safety-gates"],
+    "dependencies": ["llm-provider", "file-system", "git-integration"],
+    "success_criteria": [
+      "All safety gates pass",
+      "Generated code meets requirements",
+      "Tests pass if generated",
+      "Documentation is comprehensive",
+      "Code follows style guidelines"
+    ]
+  }
+}

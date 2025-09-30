@@ -1,0 +1,7 @@
+T1 preview<=apply ; lattice=preview,annotate,apply:fs,apply:net:api.github.com|127.0.0.1
+T2 least-priv     ; hosts=api.github.com,127.0.0.1 ; paths=./,receipts/,deliverables/ ; budget=120000
+T3 provenance     ; receipts=content-addressed
+T4 select-by-KPI  ; kpis=decision_agreement,cost_per_decision,token_ratio,time_to_emergence
+T5 selfmod->patch ; patches=unified-diff
+T6 tau single-endpoint
+PRESET fiveline : goal="Distil request into five lines + first direction" affordances=preview read= receipts/,deliverables/ write= deliverables/,receipts/

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+R="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+PORTS="$R/.oneengine/ports.env"
+[ -f "$PORTS" ] && . "$PORTS"
+URL="${ENGINE_URL:-http://127.0.0.1:8080}"
+
+echo "🤖 Meta² Chat Interface"
+echo "Engine: $URL"
+echo "Type 'quit' to exit, 'help' for commands"
+echo ""
+
+while true; do
+  printf "τ> "
+  read -r input
+  
+  case "$input" in
+    quit|exit) 
+      echo "Goodbye!"
+      break
+      ;;
+    help)
+      echo "Commands:"
+      echo "  help     - show this help"
+      echo "  ping     - check engine status"
+      echo "  doctor   - full diagnostic"
+      echo "  ports    - show port config"
+      echo "  quit     - exit chat"
+      echo "  <text>   - send to τ engine"
+      ;;
+    ping)
+      "$R/bin/ping"
+      ;;
+    doctor)
+      "$R/bin/doctor"
+      ;;
+    ports)
+      "$R/bin/ports" show
+      ;;
+    "")
+      continue
+      ;;
+    *)
+      # Send to engine via execute_goal
+      if command -v jq >/dev/null 2>&1; then
+        response=$(curl -s -X POST "$URL/execute_goal" \
+          -H "Content-Type: application/json" \
+          -d "{\"goal\":\"$input\"}" 2>/dev/null || echo '{"error":"connection failed"}')
+        
+        # Extract the actual response from the engine data
+        if echo "$response" | jq -e '.data' >/dev/null 2>&1; then
+          echo "$response" | jq -r '.data // .error // "No response"'
+        else
+          echo "$response" | jq -r '.error // "Engine responded but no data field"'
+        fi
+      else
+        curl -s -X POST "$URL/execute_goal" \
+          -H "Content-Type: application/json" \
+          -d "{\"goal\":\"$input\"}" || echo "Connection failed"
+      fi
+      ;;
+  esac
+  echo ""
+done

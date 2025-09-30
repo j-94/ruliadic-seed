@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔍 Scanning for Meta² engines..."
+echo ""
+
+FOUND=0
+
+# Check common ports
+for port in 7777 8080 8888 3000 9090 9999 4000 5000; do
+  if lsof -nPiTCP:$port -sTCP:LISTEN >/dev/null 2>&1; then
+    process=$(lsof -nPiTCP:$port -sTCP:LISTEN | tail -1 | awk '{print $1" (PID "$2")"}')
+    
+    # Test for engine endpoints
+    engine_type="unknown"
+    if curl -s -m 2 "http://127.0.0.1:$port/version" >/dev/null 2>&1; then
+      version=$(curl -s -m 2 "http://127.0.0.1:$port/version")
+      engine_type="one-engine"
+      FOUND=$((FOUND + 1))
+      echo "✅ Engine found on port $port"
+      echo "   Process: $process"
+      echo "   Type: $engine_type"
+      echo "   Version: $version"
+      
+      # Test key endpoints
+      echo "   Endpoints:"
+      for endpoint in /healthz /execute_goal; do
+        if curl -s -m 2 "http://127.0.0.1:$port$endpoint" >/dev/null 2>&1; then
+          echo "     $endpoint ✅"
+        else
+          echo "     $endpoint ❌"
+        fi
+      done
+      echo ""
+      
+    elif curl -s -m 2 "http://127.0.0.1:$port/orchestrator/chat" >/dev/null 2>&1; then
+      engine_type="meta2-orchestrator"
+      FOUND=$((FOUND + 1))
+      echo "✅ Meta² Orchestrator found on port $port"
+      echo "   Process: $process"
+      echo ""
+      
+    elif curl -s -m 2 "http://127.0.0.1:$port/healthz" >/dev/null 2>&1; then
+      health=$(curl -s -m 2 "http://127.0.0.1:$port/healthz")
+      if [[ "$health" == *"ok"* ]]; then
+        engine_type="generic-engine"
+        FOUND=$((FOUND + 1))
+        echo "✅ Generic engine found on port $port"
+        echo "   Process: $process"
+        echo "   Health: $health"
+        echo ""
+      fi
+    fi
+  fi
+done
+
+echo "📊 Summary: Found $FOUND engine(s)"
+
+if [ $FOUND -eq 0 ]; then
+  echo ""
+  echo "💡 No engines detected. Try:"
+  echo "   cd one-engine && ./run_dev.sh"
+  echo "   cd agentops && bash run.sh"
+fi

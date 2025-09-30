@@ -1,0 +1,266 @@
+{
+  "pattern_id": "map-reduce",
+  "pattern_name": "Map-Reduce Engine",
+  "version": "1.0.0",
+  "description": "Fanout shard tasks, reduce unified results for parallel processing",
+  "discovered": "2025-09-30T08:40:00Z",
+  "author": "One Engine Seed",
+  "category": "parallel-processing",
+  "maturity_level": "production",
+
+  "pattern_characteristics": {
+    "processing_style": "parallel_fanout_fanin",
+    "scalability": "high",
+    "fault_tolerance": "strong",
+    "resource_efficiency": "optimized",
+    "coordination_complexity": "medium"
+  },
+
+  "workflow_stages": [
+    {
+      "stage": "decompose",
+      "name": "Task Decomposition",
+      "description": "Break down complex task into independent, parallelizable subtasks",
+      "inputs": ["complex_task", "parallelization_criteria"],
+      "outputs": ["subtasks", "dependency_graph", "parallelization_strategy"],
+      "tools": ["task_decomposer", "dependency_analyzer"],
+      "validation": "decomposition_soundness_check"
+    },
+    {
+      "stage": "distribute",
+      "name": "Work Distribution",
+      "description": "Distribute subtasks across available workers/agents",
+      "inputs": ["subtasks", "available_resources"],
+      "outputs": ["worker_assignments", "execution_schedule"],
+      "tools": ["load_balancer", "scheduler"],
+      "validation": "distribution_efficiency_check"
+    },
+    {
+      "stage": "parallel_execute",
+      "name": "Parallel Execution",
+      "description": "Execute subtasks in parallel across distributed workers",
+      "inputs": ["worker_assignments", "execution_schedule"],
+      "outputs": ["partial_results", "execution_metadata", "performance_metrics"],
+      "tools": ["parallel_executor", "progress_monitor"],
+      "validation": "execution_correctness_check",
+      "parallel_execution": true
+    },
+    {
+      "stage": "collect",
+      "name": "Result Collection",
+      "description": "Collect and validate partial results from all workers",
+      "inputs": ["partial_results", "execution_metadata"],
+      "outputs": ["validated_results", "error_reports", "retry_requirements"],
+      "tools": ["result_collector", "validator"],
+      "validation": "result_completeness_check"
+    },
+    {
+      "stage": "reduce",
+      "name": "Result Reduction",
+      "description": "Merge and reduce collected results into unified output",
+      "inputs": ["validated_results", "reduction_strategy"],
+      "outputs": ["unified_result", "reduction_metadata"],
+      "tools": ["result_merger", "consistency_checker"],
+      "validation": "reduction_correctness_check"
+    },
+    {
+      "stage": "verify",
+      "name": "Final Verification",
+      "description": "Verify final result meets original requirements",
+      "inputs": ["unified_result", "original_requirements"],
+      "outputs": ["verification_report", "quality_metrics"],
+      "tools": ["final_validator", "quality_assessor"],
+      "validation": "final_verification_check"
+    }
+  ],
+
+  "parallelization_strategies": [
+    {
+      "strategy": "data_parallelism",
+      "description": "Split data across workers for parallel processing",
+      "use_case": "Large dataset processing, batch operations",
+      "scalability": "linear_with_data_size",
+      "coordination_overhead": "low"
+    },
+    {
+      "strategy": "task_parallelism",
+      "description": "Split independent tasks across workers",
+      "use_case": "Independent operations, embarassingly parallel problems",
+      "scalability": "linear_with_task_count",
+      "coordination_overhead": "medium"
+    },
+    {
+      "strategy": "pipeline_parallelism",
+      "description": "Chain workers in processing pipeline",
+      "use_case": "Sequential processing with parallel stages",
+      "scalability": "limited_by_pipeline_depth",
+      "coordination_overhead": "high"
+    }
+  ],
+
+  "fault_tolerance_mechanisms": [
+    {
+      "mechanism": "worker_failure_detection",
+      "description": "Detect failed workers and redistribute their tasks",
+      "implementation": "heartbeat_monitoring",
+      "recovery_time": "< 30 seconds"
+    },
+    {
+      "mechanism": "partial_result_preservation",
+      "description": "Preserve completed work from failed workers",
+      "implementation": "checkpointing",
+      "recovery_time": "< 10 seconds"
+    },
+    {
+      "mechanism": "redundant_execution",
+      "description": "Execute critical tasks on multiple workers",
+      "implementation": "selective_redundancy",
+      "overhead": "20-50% additional resources"
+    }
+  ],
+
+  "coordination_patterns": [
+    {
+      "pattern": "master_worker",
+      "description": "Central coordinator manages workers and collects results",
+      "pros": ["simple", "centralized_control"],
+      "cons": ["single_point_of_failure", "coordinator_bottleneck"]
+    },
+    {
+      "pattern": "peer_to_peer",
+      "description": "Workers coordinate directly without central master",
+      "pros": ["no_single_failure_point", "scalable"],
+      "cons": ["complex_coordination", "higher_overhead"]
+    },
+    {
+      "pattern": "hierarchical",
+      "description": "Tree structure with intermediate coordinators",
+      "pros": ["scalable", "fault_isolated"],
+      "cons": ["coordination_complexity", "latency"]
+    }
+  ],
+
+  "implementation_examples": [
+    {
+      "example": "codebase_analysis",
+      "description": "Analyze multiple code files in parallel",
+      "tasks": ["parse_file", "extract_metrics", "identify_patterns"],
+      "reduction": "aggregate_metrics_across_files",
+      "parallel_strategy": "data_parallelism"
+    },
+    {
+      "example": "batch_processing",
+      "description": "Process multiple items in parallel batches",
+      "tasks": ["validate_item", "process_item", "format_output"],
+      "reduction": "collect_all_processed_items",
+      "parallel_strategy": "task_parallelism"
+    },
+    {
+      "example": "search_indexing",
+      "description": "Build search index across multiple documents",
+      "tasks": ["parse_document", "extract_tokens", "build_inverted_index"],
+      "reduction": "merge_inverted_indices",
+      "parallel_strategy": "pipeline_parallelism"
+    }
+  ],
+
+  "performance_considerations": [
+    {
+      "factor": "task_granularity",
+      "description": "Balance between too fine-grained (high overhead) and too coarse-grained (poor parallelism)",
+      "optimization": "Aim for 10-100ms per subtask",
+      "monitoring": "track_subtask_execution_times"
+    },
+    {
+      "factor": "data_locality",
+      "description": "Minimize data movement between workers",
+      "optimization": "Co-locate computation with data",
+      "monitoring": "track_data_transfer_volume"
+    },
+    {
+      "factor": "load_balancing",
+      "description": "Ensure even distribution of work across workers",
+      "optimization": "Dynamic load balancing based on worker capacity",
+      "monitoring": "track_worker_utilization_variance"
+    }
+  ],
+
+  "integration_points": [
+    {
+      "system": "one_engine",
+      "endpoint": "/execute",
+      "configuration": "parallel_execution_enabled"
+    },
+    {
+      "system": "agent_swarm",
+      "integration": "multi_agent_coordination",
+      "pattern": "master_worker"
+    },
+    {
+      "system": "distributed_processing",
+      "integration": "worker_pool_management",
+      "pattern": "peer_to_peer"
+    }
+  ],
+
+  "monitoring_metrics": [
+    "subtask_execution_time",
+    "worker_utilization_rate",
+    "coordination_overhead",
+    "fault_recovery_time",
+    "parallel_efficiency",
+    "speedup_vs_sequential"
+  ],
+
+  "success_criteria": [
+    "All subtasks complete successfully",
+    "Results properly merged and validated",
+    "Performance meets scalability requirements",
+    "Fault tolerance mechanisms work correctly",
+    "Resource utilization is efficient"
+  ],
+
+  "failure_modes": [
+    {
+      "mode": "coordination_failure",
+      "description": "Workers cannot coordinate properly",
+      "detection": "missing_heartbeats",
+      "recovery": "restart_coordination_layer"
+    },
+    {
+      "mode": "data_inconsistency",
+      "description": "Partial results are inconsistent",
+      "detection": "validation_failures",
+      "recovery": "retry_inconsistent_subtasks"
+    },
+    {
+      "mode": "resource_exhaustion",
+      "description": "Workers run out of resources",
+      "detection": "resource_monitoring_alerts",
+      "recovery": "scale_up_resources_or_reduce_parallelism"
+    }
+  ],
+
+  "evolution_path": [
+    "v1.0: Basic map-reduce with master-worker coordination",
+    "v1.1: Add fault tolerance and partial result preservation",
+    "v1.2: Implement peer-to-peer coordination patterns",
+    "v1.3: Add dynamic load balancing and resource optimization",
+    "v2.0: Full autonomous distributed processing with self-healing"
+  ],
+
+  "related_patterns": [
+    "coged-gen",
+    "agentic_systems",
+    "divide_and_conquer",
+    "scatter_gather",
+    "pipeline_processing"
+  ],
+
+  "resources": [
+    "tasks/map_reduce_template.utir.json - Task template",
+    "policies/map_reduce_gates.cel - Coordination policies",
+    "bin/map-reduce - CLI interface",
+    "docs/map_reduce_guide.md - Implementation guide"
+  ]
+}

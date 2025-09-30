@@ -1,0 +1,304 @@
+# One Engine Seed - Git Ignore File
+
+# ==========================================
+# SYSTEM FILES
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==========================================
+# LOGS AND TEMPORARY FILES
+# ==========================================
+*.log
+*.tmp
+*.temp
+*.pid
+nohup.out
+*.stdout.log
+
+# ==========================================
+# DELIVERABLES (Generated content)
+# ==========================================
+deliverables/
+receipts/
+memory/
+heuristics/refined/
+patterns/generated/
+benchmarks/results/
+
+# ==========================================
+# SECRETS AND SENSITIVE DATA
+# ==========================================
+.secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.local
+.env.*.local
+
+# ==========================================
+# DEVELOPMENT FILES
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==========================================
+# DEPENDENCIES AND BUILD ARTIFACTS
+# ==========================================
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+
+# ==========================================
+# RUNTIME DATA
+# ==========================================
+*.pid
+*.seed
+*.pid.lock
+
+# ==========================================
+# COVERAGE REPORTS
+# ==========================================
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ==========================================
+# TRANSLATIONS
+# ==========================================
+*.mo
+*.pot
+
+# ==========================================
+# DJANGO STUFF
+# ==========================================
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# ==========================================
+# FLASK STUFF
+# ==========================================
+instance/
+.webassets-cache
+
+# ==========================================
+# SCRAPY STUFF
+# ==========================================
+.scrapy
+
+# ==========================================
+# SPHINX DOCUMENTATION
+# ==========================================
+docs/_build/
+
+# ==========================================
+# PYBUILDER
+# ==========================================
+.pybuilder/
+target/
+
+# ==========================================
+# JUPYTER NOTEBOOK
+# ==========================================
+.ipynb_checkpoints
+
+# ==========================================
+# IPYTHON
+# ==========================================
+profile_default/
+ipython_config.py
+
+# ==========================================
+# PYENV
+# ==========================================
+.python-version
+
+# ==========================================
+# PIPENV
+# ==========================================
+Pipfile.lock
+
+# ==========================================
+# PEP 582
+# ==========================================
+__pypackages__/
+
+# ==========================================
+# CELERY STUFF
+# ==========================================
+celerybeat-schedule
+celerybeat.pid
+
+# ==========================================
+# SAGE MATH
+# ==========================================
+*.sage.py
+
+# ==========================================
+# VIRTUAL ENVIRONMENTS
+# ==========================================
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ==========================================
+# MKDOCS DOCUMENTATION
+# ==========================================
+/site
+
+# ==========================================
+# MY PROJECTS SPECIFIC
+# ==========================================
+# Keep deliverables structure but ignore generated content
+deliverables/*/
+!deliverables/.gitkeep
+
+# Keep memory structure but ignore runtime data
+memory/sessions/*.json
+memory/context/*.json
+!memory/sessions/
+!memory/context/
+
+# Keep logs but ignore recent ones (older than 7 days handled by scripts)
+*.log {
+    mtime +7
+}
+
+# ==========================================
+# OS SPECIFIC
+# ==========================================
+# Windows
+*.dll
+*.exe
+*.bat
+*.cmd
+
+# macOS
+*.app
+
+# Linux
+*~
+
+# ==========================================
+# EDITORS
+# ==========================================
+# Vim
+[._]*.s[a-v][a-z]
+!*.svg
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Session.vimx
+.netrwhist
+*~
+tags
+[._]*.un~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# ==========================================
+# SPECIFIC FILE TYPES
+# ==========================================
+# Compressed files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*.rej
+
+# ==========================================
+# ALLOW SPECIFIC FILES
+# ==========================================
+# Keep these important files
+!.gitignore
+!README.md
+!LICENSE
+!TASK_PLAYBOOK.md
+!CODE_ENGINES_GUIDE.md
+
+# Keep configuration templates
+!.oneengine/
+!engine.dsl
+!tasks/
+!policies/
+!patterns/
+
+# Keep executable scripts
+!bin/
+!seed.sh
+
+# ==========================================
+# DEVELOPMENT OVERRIDES
+# ==========================================
+# Uncomment to keep deliverables during development
+# deliverables/
+# receipts/
+# memory/

@@ -1,0 +1,190 @@
+{
+  "pattern_id": "coged-gen",
+  "pattern_name": "Cognitive Code Generation",
+  "version": "1.0.0",
+  "description": "Iterative plan/draft/critique loop for high-quality code generation",
+  "discovered": "2025-09-30T08:40:00Z",
+  "author": "One Engine Seed",
+  "category": "code-generation",
+  "maturity_level": "production",
+
+  "pattern_characteristics": {
+    "iteration_style": "plan_draft_critique_refine",
+    "quality_focus": "high",
+    "safety_emphasis": "strong",
+    "feedback_loops": "multiple",
+    "human_oversight": "required_for_sensitive_operations"
+  },
+
+  "workflow_stages": [
+    {
+      "stage": "analyze",
+      "name": "Requirements Analysis",
+      "description": "Analyze user prompt and extract core requirements, constraints, and complexity factors",
+      "inputs": ["user_prompt", "language_preference", "project_context"],
+      "outputs": ["structured_requirements", "technical_constraints", "complexity_assessment"],
+      "tools": ["llm_requirements_analyzer", "context_extractor"],
+      "validation": "requirements_completeness_check"
+    },
+    {
+      "stage": "plan",
+      "name": "Implementation Planning",
+      "description": "Create detailed implementation plan with architecture decisions and file structure",
+      "inputs": ["structured_requirements", "technical_constraints"],
+      "outputs": ["implementation_plan", "architecture_decision", "file_structure"],
+      "tools": ["llm_planner", "architecture_analyzer"],
+      "validation": "plan_feasibility_check",
+      "gates": ["freshness_gate", "evidence_gate"]
+    },
+    {
+      "stage": "draft",
+      "name": "Initial Code Draft",
+      "description": "Generate initial code solution based on the implementation plan",
+      "inputs": ["implementation_plan", "file_structure"],
+      "outputs": ["draft_code", "draft_files", "draft_explanation"],
+      "tools": ["llm_code_generator", "template_renderer"],
+      "validation": "syntax_and_structure_check",
+      "gates": ["caps_gate", "ask_act_gate"]
+    },
+    {
+      "stage": "critique",
+      "name": "Code Review and Critique",
+      "description": "Review draft for issues, improvements, and compliance with requirements",
+      "inputs": ["draft_code", "structured_requirements"],
+      "outputs": ["critique_results", "identified_issues", "suggested_improvements"],
+      "tools": ["llm_code_critic", "style_checker", "security_scanner"],
+      "validation": "critique_completeness_check",
+      "gates": ["evidence_gate"]
+    },
+    {
+      "stage": "refine",
+      "name": "Code Refinement",
+      "description": "Apply improvements and optimizations based on critique feedback",
+      "inputs": ["draft_code", "critique_results", "suggested_improvements"],
+      "outputs": ["refined_code", "refined_files", "refined_explanation"],
+      "tools": ["llm_code_refiner", "performance_optimizer"],
+      "validation": "improvement_verification_check",
+      "gates": ["caps_gate", "ask_act_gate"]
+    },
+    {
+      "stage": "validate",
+      "name": "Safety and Quality Validation",
+      "description": "Apply comprehensive safety checks and quality validation",
+      "inputs": ["refined_code", "structured_requirements"],
+      "outputs": ["safety_report", "quality_report", "approval_requirements"],
+      "tools": ["safety_validator", "quality_assessor", "compliance_checker"],
+      "validation": "safety_gate_check",
+      "gates": ["caps_gate"]
+    }
+  ],
+
+  "safety_gates": {
+    "ask_act_gate": "Requirements understood AND safety constraints met",
+    "evidence_gate": "Supporting evidence gathered OR low uncertainty",
+    "caps_gate": "Not sensitive OR (sensitive AND human approval granted)",
+    "freshness_gate": "Context current OR context refreshed"
+  },
+
+  "quality_metrics": {
+    "primary_kpis": [
+      "code_quality_score",
+      "security_vulnerability_count",
+      "performance_efficiency",
+      "maintainability_index"
+    ],
+    "secondary_kpis": [
+      "test_coverage_percentage",
+      "documentation_completeness",
+      "style_guide_compliance",
+      "complexity_score"
+    ]
+  },
+
+  "implementation_examples": [
+    {
+      "example": "fibonacci_function",
+      "language": "python",
+      "description": "Generate a recursive fibonacci function with proper error handling",
+      "prompt": "Write a Python function to calculate fibonacci numbers recursively",
+      "expected_stages": ["analyze", "plan", "draft", "critique", "refine", "validate"],
+      "expected_outputs": ["fibonacci.py", "test_fibonacci.py", "README.md"]
+    },
+    {
+      "example": "rest_api",
+      "language": "javascript",
+      "description": "Create a REST API endpoint with proper validation and error handling",
+      "prompt": "Create a REST API endpoint for user management",
+      "expected_stages": ["analyze", "plan", "draft", "critique", "refine", "validate"],
+      "expected_outputs": ["api.js", "test_api.js", "swagger.yaml"]
+    }
+  ],
+
+  "integration_points": [
+    {
+      "system": "one_engine",
+      "endpoint": "/codex",
+      "configuration": "tasks/codex_agent.utir.json"
+    },
+    {
+      "system": "vim_neovim",
+      "integration": "editor-integrations.vim",
+      "commands": [":CodexGenerate", ":CodexExplain", ":CodexReview"]
+    },
+    {
+      "system": "cli",
+      "integration": "bin/codex",
+      "usage": "codex 'prompt' [language] [output_file]"
+    }
+  ],
+
+  "success_criteria": [
+    "All safety gates pass",
+    "Generated code meets all requirements",
+    "Code follows specified style guidelines",
+    "Tests pass if generated",
+    "Documentation is comprehensive and accurate",
+    "No security vulnerabilities detected",
+    "Performance meets acceptable thresholds"
+  ],
+
+  "failure_modes": [
+    {
+      "mode": "safety_block",
+      "description": "Safety gates prevent execution",
+      "resolution": "Review safety concerns and get human approval if needed"
+    },
+    {
+      "mode": "quality_failure",
+      "description": "Generated code fails quality checks",
+      "resolution": "Refine requirements or adjust quality thresholds"
+    },
+    {
+      "mode": "infinite_loop",
+      "description": "Critique/refine cycle doesn't converge",
+      "resolution": "Add convergence criteria and maximum iteration limits"
+    }
+  ],
+
+  "evolution_path": [
+    "v1.0: Basic plan/draft/critique loop",
+    "v1.1: Add multi-language support",
+    "v1.2: Integrate with external tools (linters, formatters)",
+    "v1.3: Add collaborative features (code review integration)",
+    "v2.0: Full autonomous code generation with human oversight"
+  ],
+
+  "related_patterns": [
+    "map-reduce",
+    "agentic_systems",
+    "proof_of_correctness",
+    "human_in_the_loop"
+  ],
+
+  "resources": [
+    "tasks/codex_agent.utir.json - Complete task definition",
+    "policies/codex_gates.cel - Safety and quality gates",
+    "bin/codex - CLI interface",
+    "editor-integrations.vim - Editor integration",
+    "TASK_PLAYBOOK.md - Implementation guide"
+  ]
+}

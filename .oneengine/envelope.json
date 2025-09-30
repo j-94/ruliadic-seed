@@ -1,0 +1,6 @@
+{"model":{"id":"gpt-4o-mini","max_tokens":120000},
+ "safety":{"net_allow":["api.github.com","127.0.0.1"]},
+ "alignment":{"preview_by_default":true,"allowed_shell_paths":["./","receipts/","deliverables/"],
+  "two_person_min_risk":"high","max_tokens_per_run":120000,
+  "kpi":["decision_agreement","cost_per_decision","token_ratio","time_to_emergence"],
+  "theme_sig":"162e3095bf40696c457430297a3e07fbba3172a453da3fc514501f9c2b03c098"}}

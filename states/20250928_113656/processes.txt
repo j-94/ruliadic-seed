@@ -1,0 +1,7 @@
+imac             36037  92.8  0.0 411210480   3568   ??  R    Thu05pm 3905:45.47 python one_engine_cli.py
+_neuralengine    13123   0.0  0.0 410327168   3264   ??  Ss   10:49am   0:00.11 /usr/libexec/aneuserd
+imac             13790   0.0  0.0 410592928      0 s025  Ss+  Wed11am   0:00.00 tail -f /tmp/one_engine_governance.log
+imac             13789   0.0  0.0 411708080   2320   ??  Ss   Wed11am   0:00.25 tmux new-session -d -s one_engine_monitor tail -f /tmp/one_engine_governance.log
+imac             11688   0.0  0.0 412073056   3840   ??  S    Tue10am   0:43.96 python analysis/spec_build.py analysis/incoming/pbpaste_chat.txt analysis/incoming/empty.jsonl analysis/spec_out/pbpaste --engine langextract --langextract-model gemini-2.5-flash --langextract-temperature 0.0 --langextract-max-items 25
+_neuralengine     8408   0.0  0.0 410266656    288   ??  S    Tue06am   0:08.42 /usr/sbin/distnoted agent
+imac             26011   0.0  0.1 411225616  11504 s031  S+   11:32am   0:00.28 target/debug/one-engine --port 8080 --host 0.0.0.0 --memory-path ./memory --allowed-domains httpbin.org,api.github.com,jsonplaceholder.typicode.com

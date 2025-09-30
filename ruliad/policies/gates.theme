@@ -1,0 +1,7 @@
+ALLOW when
+  hosts ⊆ safety.net_allow AND
+  paths ⊆ alignment.allowed_shell_paths AND
+  budget ≤ alignment.max_tokens_per_run AND
+  (affordances == ["preview"] OR human_signoff = true) AND
+  acceptance AND contract
+ELSE reason ∈ {host_not_allowed, path_violation, over_budget, needs_signoff, missing_acceptance, missing_contract}

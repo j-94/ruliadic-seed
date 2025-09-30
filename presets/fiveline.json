@@ -1,0 +1,5 @@
+{"contract":{"goal":"Distil request into five lines + first direction","risk":"low",
+ "must_nots":["no real execution"],
+ "io":{"read":["receipts/","deliverables/"],"write":["deliverables/","receipts/"]},
+ "affordances":["preview"],"acceptance":["machine-checkable"]},
+ "context":{"refs":["receipts/","deliverables/"],"hints":{}}}

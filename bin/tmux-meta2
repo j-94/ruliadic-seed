@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+R="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+SESSION="meta2"
+
+case "${1:-start}" in
+  start)
+    # Kill existing session if it exists
+    tmux kill-session -t "$SESSION" 2>/dev/null || true
+    
+    # Create new session with engine window
+    tmux new-session -d -s "$SESSION" -n "engine" -c "$R"
+    tmux send-keys -t "$SESSION:engine" "# Engine running on $(grep ENGINE_URL $R/.oneengine/ports.env | cut -d= -f2)" Enter
+    tmux send-keys -t "$SESSION:engine" "cd ../one-engine && ./run_dev.sh" Enter
+    
+    # Add chat window
+    tmux new-window -t "$SESSION" -n "chat" -c "$R"
+    tmux send-keys -t "$SESSION:chat" "# Chat with τ engine" Enter
+    tmux send-keys -t "$SESSION:chat" "./bin/chat" Enter
+    
+    # Add monitoring window
+    tmux new-window -t "$SESSION" -n "monitor" -c "$R"
+    tmux send-keys -t "$SESSION:monitor" "# Monitoring dashboard" Enter
+    tmux send-keys -t "$SESSION:monitor" "./bin/serve" Enter
+    
+    # Add logs window
+    tmux new-window -t "$SESSION" -n "logs" -c "$R"
+    tmux send-keys -t "$SESSION:logs" "# Engine logs" Enter
+    tmux send-keys -t "$SESSION:logs" "tail -f receipts/engine.stdout.log" Enter
+    
+    # Add tools window
+    tmux new-window -t "$SESSION" -n "tools" -c "$R"
+    tmux send-keys -t "$SESSION:tools" "# Quick tools" Enter
+    tmux send-keys -t "$SESSION:tools" "echo 'Available: ./bin/ping, ./bin/doctor, ./bin/ports'" Enter
+    
+    # Switch to chat window
+    tmux select-window -t "$SESSION:chat"
+    
+    echo "✅ Meta² tmux session started"
+    echo "Windows: engine, chat, monitor, logs, tools"
+    echo "Attach with: tmux attach -t $SESSION"
+    echo "Dashboard: http://localhost:8888/visibility.html"
+    ;;
+    
+  attach)
+    tmux attach -t "$SESSION"
+    ;;
+    
+  stop)
+    tmux kill-session -t "$SESSION" 2>/dev/null || true
+    echo "✅ Meta² session stopped"
+    ;;
+    
+  list)
+    echo "=== Meta² Session Windows ==="
+    tmux list-windows -t "$SESSION" 2>/dev/null || echo "Session not running"
+    ;;
+    
+  *)
+    echo "Usage: tmux-meta2 {start|attach|stop|list}"
+    echo ""
+    echo "Windows created:"
+    echo "  engine  - one-engine server"
+    echo "  chat    - τ chat interface" 
+    echo "  monitor - visibility dashboard"
+    echo "  logs    - engine logs"
+    echo "  tools   - diagnostic tools"
+    ;;
+esac

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+R="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+KC="$R/.oneengine/kernel.json"
+PORTS="$R/.oneengine/ports.env"
+[ -f "$PORTS" ] || "$R/bin/write_ports" >/dev/null
+# shellcheck disable=SC1090
+. "$PORTS"
+ENGINE_URL="${ENGINE_URL:-http://127.0.0.1:8080}"
+BIND="${ENGINE_BIND_ADDR:-${ENGINE_URL#http://}}"
+BIND="${BIND#https://}"
+
+: "${ENGINE_CMD:=}"
+
+if [ -z "${ENGINE_CMD:-}" ]; then
+  if [ -x "$R/engine" ]; then
+    ENGINE_CMD="$R/engine --kernel $KC --bind $BIND"
+  elif [ -x "$R/../engine" ]; then
+    ENGINE_CMD="$R/../engine --kernel $KC --bind $BIND"
+  elif [ -x "$R/../target/release/one-engine" ]; then
+    ENGINE_CMD="$R/../target/release/one-engine --kernel $KC --bind $BIND"
+  elif [ -x "$R/../target/release/engine" ]; then
+    ENGINE_CMD="$R/../target/release/engine --kernel $KC --bind $BIND"
+  fi
+fi
+
+[ -n "${ENGINE_CMD:-}" ] || { echo "❌ No ENGINE_CMD. Put your engine binary at ./engine or export ENGINE_CMD='…'"; exit 1; }
+
+mkdir -p "$R/receipts"
+echo "▶ starting: $ENGINE_CMD"
+nohup bash -lc "$ENGINE_CMD" > "$R/receipts/engine.stdout.log" 2>&1 &
+echo $! > "$R/receipts/engine.pid"
+echo "pid=$(cat "$R/receipts/engine.pid")  logs=$R/receipts/engine.stdout.log  bind=$BIND"
+echo "ℹ if macOS prompts for network permission, allow it."

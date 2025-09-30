@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import json, os, sys, re
+from pathlib import Path
+
+R = Path(__file__).resolve().parent.parent
+candidates = [
+  R/"repo_inventory.json",
+  Path.cwd()/"repo_inventory.json",
+]
+data = {}
+for p in candidates:
+  if p.exists():
+    try:
+      data = json.loads(p.read_text())
+      src = str(p); break
+    except Exception:
+      data = {}; src = None
+else:
+  print("no-inventory", end="")
+  sys.exit(0)
+
+# Walk JSON, collect any ints or strings that look like ports
+ports = set()
+def walk(x):
+  if isinstance(x, dict):
+    for v in x.values(): walk(v)
+  elif isinstance(x, list):
+    for v in x: walk(v)
+  elif isinstance(x, int):
+    if 1 <= x <= 65535: ports.add(int(x))
+  elif isinstance(x, str):
+    for m in re.findall(r"\\b(\\d{2,5})\\b", x):
+      try:
+        v = int(m)
+        if 1 <= v <= 65535: ports.add(v)
+      except: pass
+walk(data)
+
+# Preference order: 8080 (dev τ+UI), 7777 (prod τ ), 3000 (UI), else lowest above 1024
+pref = [8080, 7777, 3000]
+chosen = None
+for p in pref:
+  if p in ports: chosen = p; break
+if chosen is None:
+  user_ports = sorted([p for p in ports if p >= 1024]) or [8080]
+  chosen = user_ports[0]
+
+engine_host = "127.0.0.1"
+engine_url = f"http://{engine_host}:{chosen}"
+ui_url = engine_url  # same by default
+
+print(f"ENGINE_URL={engine_url}\nUI_URL={ui_url}\nINVENTORY_SRC={src or ''}")

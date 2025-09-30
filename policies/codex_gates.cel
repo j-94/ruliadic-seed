@@ -1,0 +1,335 @@
+// Codex Agent Quality & Safety Gates
+// CEL (Common Expression Language) policies for code generation
+// Generated: 2025-09-30 08:39 UTC
+
+// ==========================================
+// SAFETY GATES (Must pass for execution)
+// ==========================================
+
+// Ask/Act Gate: Execute only if A==1 ∧ P==1 ∧ Δ==0
+// Alignment, Permission, and Context Freshness must all be satisfied
+ask_act_gate(request, context) = request.alignment.A == 1
+    && request.permission.P == 1
+    && request.context.Δ == 0
+
+// Evidence Gate: If uncertainty U==1, gather evidence before setting T==1
+evidence_gate(request, context) = request.uncertainty.U == 0
+    || (request.evidence_gathered == true && request.trust.T == 1)
+
+// Caps Gate: Sensitive capabilities require P==1 with human preview
+caps_gate(request, context) = request.capabilities.sensitive == false
+    || (request.capabilities.sensitive == true && request.human_preview == true)
+
+// Freshness Gate: If context Δ==1, re-ground context before acting
+freshness_gate(request, context) = request.context.Δ == 0
+    || request.context.regrounded == true
+
+// ==========================================
+// QUALITY GATES (Applied to generated code)
+// ==========================================
+
+// Code Quality Assessment
+quality_gate(code, requirements) = has(has_required_structure(code, requirements.language))
+    && has(has_documentation(code))
+    && has(has_error_handling(code, requirements.error_handling))
+    && has(has_input_validation(code, requirements.input_validation))
+    && size(code.lines) <= requirements.max_lines
+    && complexity_score(code) <= requirements.max_complexity
+
+// Security Vulnerability Check
+security_gate(code, requirements) = has(!has_injection_vulnerabilities(code))
+    && has(!has_path_traversal(code))
+    && has(!has_unsafe_deserialization(code))
+    && has(!has_hardcoded_secrets(code))
+    && has(!has_insecure_randomness(code))
+    && has(!has_timing_attacks(code))
+
+// Performance Gate
+performance_gate(code, requirements) = has(!has_infinite_loops(code))
+    && has(!has_unbounded_recursion(code))
+    && has(!has_memory_leaks(code))
+    && has(!has_inefficient_algorithms(code))
+    && has(has_resource_limits(code))
+
+// Style Guide Compliance
+style_gate(code, requirements) = has(follows_naming_conventions(code, requirements.style_guide))
+    && has(has_consistent_formatting(code))
+    && has(has_proper_indentation(code))
+    && has(has_meaningful_comments(code))
+    && has(has_type_hints(code, requirements.language))
+
+// Test Coverage Gate
+test_gate(code, requirements) = requirements.generate_tests == false
+    || (has(has_unit_tests(code))
+    && has(has_integration_tests(code))
+    && has(has_edge_case_tests(code))
+    && test_coverage_percentage(code) >= 80)
+
+// ==========================================
+// HELPER FUNCTIONS
+// ==========================================
+
+// Required structure check
+has_required_structure(code, language) = language == "python" && has(has_class_definition(code) || has(has_function_definition(code)))
+    || language == "javascript" && has(has_function_definition(code) || has(has_class_definition(code)))
+    || language == "rust" && has(has_fn_definition(code) || has(has_struct_definition(code)))
+    || language == "go" && has(has_func_definition(code) || has(has_type_definition(code)))
+    || true  // Allow other languages with basic structure
+
+// Documentation check
+has_documentation(code) = has(has_module_docstring(code))
+    || has(has_function_docstrings(code))
+    || has(has_class_docstrings(code))
+    || has(has_inline_comments(code))
+
+// Error handling check
+has_error_handling(code, required) = !required
+    || has(has_try_catch(code))
+    || has(has_error_returns(code))
+    || has(has_panic_handling(code))
+
+// Input validation check
+has_input_validation(code, required) = !required
+    || has(has_parameter_validation(code))
+    || has(has_type_checking(code))
+    || has(has_bounds_checking(code))
+
+// Security vulnerability checks
+has_injection_vulnerabilities(code) = has(has_sql_injection(code))
+    || has(has_xss_vulnerabilities(code))
+    || has(has_command_injection(code))
+    || has(has_ldap_injection(code))
+
+has_path_traversal(code) = has(has_directory_traversal(code))
+    || has(has_unsafe_path_operations(code))
+
+has_unsafe_deserialization(code) = has(has_pickle_usage(code))
+    || has(has_yaml_load(code))
+    || has(has_marshal_usage(code))
+
+has_hardcoded_secrets(code) = has(has_api_keys_in_code(code))
+    || has(has_passwords_in_code(code))
+    || has(has_tokens_in_code(code))
+
+has_insecure_randomness(code) = has(has_math_random(code))
+    || has(has_rand_seed(code))
+    || has(has_weak_random(code))
+
+has_timing_attacks(code) = has(has_string_comparison_timing(code))
+    || has(has_timing_sensitive_operations(code))
+
+// Performance checks
+has_infinite_loops(code) = has(has_unbounded_loops(code))
+    || has(has_missing_break_conditions(code))
+
+has_unbounded_recursion(code) = has(has_recursive_calls_without_base_case(code))
+    || has(has_deep_recursion(code))
+
+has_memory_leaks(code) = has(has_unclosed_resources(code))
+    || has(has_growing_data_structures(code))
+
+has_inefficient_algorithms(code) = has(has_nested_loops_unnecessarily(code))
+    || has(has_quadratic_algorithms(code))
+    || has(has_inefficient_data_structures(code))
+
+has_resource_limits(code) = has(has_timeout_handling(code))
+    || has(has_memory_limits(code))
+    || has(has_rate_limiting(code))
+
+// Style guide checks
+follows_naming_conventions(code, style_guide) = style_guide == "pep8" && has(has_pep8_naming(code))
+    || style_guide == "eslint" && has(has_eslint_naming(code))
+    || style_guide == "rustfmt" && has(has_rust_naming(code))
+    || true  // Default to allowing other styles
+
+has_consistent_formatting(code) = has(has_consistent_quotes(code))
+    && has(has_consistent_brackets(code))
+    && has(has_consistent_spacing(code))
+
+has_proper_indentation(code) = has(has_consistent_indent_size(code))
+    && has(has_no_mixed_tabs_spaces(code))
+    && has(has_proper_indent_alignment(code))
+
+has_meaningful_comments(code) = has(has_function_comments(code))
+    && has(has_complex_logic_comments(code))
+    && has(!has_obvious_comments(code))
+
+has_type_hints(code, language) = language == "python" && has(has_type_annotations(code))
+    || language == "typescript" && has(has_type_declarations(code))
+    || language == "rust" && has(has_type_signatures(code))
+    || !requires_type_hints(language)
+
+// Test coverage checks
+has_unit_tests(code) = has(has_function_test_functions(code))
+    || has(has_class_test_methods(code))
+
+has_integration_tests(code) = has(has_api_endpoint_tests(code))
+    || has(has_database_integration_tests(code))
+    || has(has_external_service_tests(code))
+
+has_edge_case_tests(code) = has(has_empty_input_tests(code))
+    && has(has_null_input_tests(code))
+    && has(has_boundary_value_tests(code))
+    && has(has_error_condition_tests(code))
+
+// ==========================================
+// RISK ASSESSMENT
+// ==========================================
+
+// Risk level calculation
+calculate_risk_level(code, requirements) = size(get_risk_factors(code, requirements)) == 0 ? "low"
+    : size(get_risk_factors(code, requirements)) <= 2 ? "medium"
+    : "high"
+
+// Get risk factors
+get_risk_factors(code, requirements) = [
+    has_injection_vulnerabilities(code) ? "injection_vulnerability" : "",
+    has_hardcoded_secrets(code) ? "hardcoded_secrets" : "",
+    has_infinite_loops(code) ? "infinite_loops" : "",
+    has_unbounded_recursion(code) ? "unbounded_recursion" : "",
+    has_memory_leaks(code) ? "memory_leaks" : "",
+    requirements.allow_network && !has(has_network_security(code)) ? "network_security" : "",
+    requirements.allow_file_system && !has(has_file_system_security(code)) ? "filesystem_security" : "",
+    !has_documentation(code) ? "no_documentation" : "",
+    !has_error_handling(code, true) ? "no_error_handling" : "",
+    !has_input_validation(code, true) ? "no_input_validation" : ""
+] .filter(f, f != "")
+
+// ==========================================
+// COMPLIANCE CHECKS
+// ==========================================
+
+// Language-specific compliance
+language_compliance(code, language) = language == "python" && python_compliance(code)
+    || language == "javascript" && javascript_compliance(code)
+    || language == "rust" && rust_compliance(code)
+    || language == "go" && go_compliance(code)
+    || basic_compliance(code)
+
+// Python-specific checks
+python_compliance(code) = has(has_pep8_compliance(code))
+    && has(has_type_hints(code))
+    && has(has_docstrings(code))
+    && has(!has_bare_except(code))
+    && has(!has_wildcard_imports(code))
+
+// JavaScript/TypeScript checks
+javascript_compliance(code) = has(has_eslint_compliance(code))
+    && has(has_proper_async_await(code))
+    && has(!has_var_usage(code))
+    && has(!has_eval_usage(code))
+    && has(!has_with_statement(code))
+
+// Rust-specific checks
+rust_compliance(code) = has(has_rustfmt_compliance(code))
+    && has(has_proper_error_handling(code))
+    && has(!has_unsafe_code(code))
+    && has(!has_panic_usage(code))
+    && has(has_lifetime_annotations(code))
+
+// Go-specific checks
+go_compliance(code) = has(has_gofmt_compliance(code))
+    && has(has_proper_error_handling(code))
+    && has(!has_global_variables(code))
+    && has(!has_init_functions(code))
+    && has(has_package_comments(code))
+
+// Basic compliance for other languages
+basic_compliance(code) = has(has_proper_syntax(code))
+    && has(has_consistent_formatting(code))
+    && has(has_meaningful_names(code))
+
+// ==========================================
+// METRICS CALCULATION
+// ==========================================
+
+// Complexity score (cyclomatic complexity approximation)
+complexity_score(code) = size(get_functions(code)) * 1.5
+    + size(get_conditionals(code)) * 2
+    + size(get_loops(code)) * 1.5
+    + size(get_nested_structures(code)) * 3
+
+// Code size metrics
+code_metrics(code) = {
+    "lines_of_code": size(code.lines),
+    "functions": size(get_functions(code)),
+    "classes": size(get_classes(code)),
+    "complexity_score": complexity_score(code),
+    "comment_ratio": comment_ratio(code),
+    "test_coverage": estimated_test_coverage(code)
+}
+
+// Comment ratio calculation
+comment_ratio(code) = size(get_comment_lines(code)) / size(code.lines) * 100
+
+// Estimated test coverage (basic heuristic)
+estimated_test_coverage(code) = has(has_unit_tests(code)) ? 60 : 0
+    + has(has_integration_tests(code)) ? 25 : 0
+    + has(has_edge_case_tests(code)) ? 15 : 0
+
+// ==========================================
+// APPROVAL REQUIREMENTS
+// ==========================================
+
+// Determine if human approval is required
+requires_approval(code, requirements) = calculate_risk_level(code, requirements) == "high"
+    || requirements.require_review == true
+    || !quality_gate(code, requirements)
+    || !security_gate(code, requirements)
+
+// Get approval reasons
+get_approval_reasons(code, requirements) = [
+    calculate_risk_level(code, requirements) == "high" ? "High risk code detected" : "",
+    requirements.require_review == true ? "Manual review required" : "",
+    !quality_gate(code, requirements) ? "Quality standards not met" : "",
+    !security_gate(code, requirements) ? "Security concerns identified" : ""
+] .filter(r, r != "")
+
+// ==========================================
+// GATE EVALUATION
+// ==========================================
+
+// Main gate evaluation function
+evaluate_gates(request, code, context) = {
+    "ask_act_passed": ask_act_gate(request, context),
+    "evidence_passed": evidence_gate(request, context),
+    "caps_passed": caps_gate(request, context),
+    "freshness_passed": freshness_gate(request, context),
+    "quality_passed": quality_gate(code, request.requirements),
+    "security_passed": security_gate(code, request.requirements),
+    "performance_passed": performance_gate(code, request.requirements),
+    "style_passed": style_gate(code, request.requirements),
+    "test_passed": test_gate(code, request.requirements),
+    "overall_passed": ask_act_gate(request, context)
+        && evidence_gate(request, context)
+        && caps_gate(request, context)
+        && freshness_gate(request, context)
+        && quality_gate(code, request.requirements)
+        && security_gate(code, request.requirements)
+        && performance_gate(code, request.requirements)
+        && style_gate(code, request.requirements)
+        && test_gate(code, request.requirements)
+}
+
+// Generate gate report
+generate_gate_report(evaluation) = {
+    "timestamp": timestamp(),
+    "gates_evaluated": keys(evaluation),
+    "passed_gates": keys(evaluation).filter(g, evaluation[g] == true),
+    "failed_gates": keys(evaluation).filter(g, evaluation[g] == false),
+    "overall_status": evaluation.overall_passed ? "PASSED" : "FAILED",
+    "recommendations": generate_recommendations(evaluation)
+}
+
+// Generate improvement recommendations
+generate_recommendations(evaluation) = [
+    !evaluation.quality_passed ? "Improve code quality and documentation" : "",
+    !evaluation.security_passed ? "Address security vulnerabilities" : "",
+    !evaluation.performance_passed ? "Optimize performance and resource usage" : "",
+    !evaluation.style_passed ? "Fix style guide violations" : "",
+    !evaluation.test_passed ? "Add comprehensive tests" : "",
+    !evaluation.ask_act_passed ? "Ensure proper alignment and permissions" : "",
+    !evaluation.evidence_passed ? "Gather supporting evidence for uncertain operations" : "",
+    !evaluation.caps_passed ? "Get human approval for sensitive operations" : "",
+    !evaluation.freshness_passed ? "Refresh context before proceeding" : ""
+] .filter(r, r != "")

@@ -1,0 +1,6 @@
+{"contract":{"goal":"Propose patches to improve KPIs","risk":"low",
+ "must_nots":["no real execution"],
+ "io":{"read":[".oneengine/","policies/","presets/","receipts/"],"write":["deliverables/"]},
+ "affordances":["preview"],
+ "acceptance":["machine-checkable"]},
+ "context":{"refs":["receipts/","deliverables/"],"hints":{}}}

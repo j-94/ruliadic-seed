@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+R="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+STATE_DIR="$R/states/$TIMESTAMP"
+
+mkdir -p "$STATE_DIR"
+
+echo "💾 Saving engine state at $TIMESTAMP"
+
+# Save current port config
+cp "$R/.oneengine/ports.env" "$STATE_DIR/ports.env"
+
+# Save engine info
+URL=$(grep ENGINE_URL "$R/.oneengine/ports.env" | cut -d= -f2)
+echo "Engine URL: $URL" > "$STATE_DIR/engine_info.txt"
+
+# Test and save engine responses
+if curl -s -m 5 "$URL/version" > "$STATE_DIR/version.json" 2>/dev/null; then
+  echo "✅ Version saved"
+else
+  echo "❌ Version failed" > "$STATE_DIR/version.json"
+fi
+
+if curl -s -m 5 "$URL/healthz" > "$STATE_DIR/health.json" 2>/dev/null; then
+  echo "✅ Health saved"
+else
+  echo "❌ Health failed" > "$STATE_DIR/health.json"
+fi
+
+# Test execute_goal
+if curl -s -m 10 -X POST "$URL/execute_goal" \
+  -H "Content-Type: application/json" \
+  -d '{"goal":"test state save"}' > "$STATE_DIR/test_execution.json" 2>/dev/null; then
+  echo "✅ Test execution saved"
+else
+  echo "❌ Test execution failed" > "$STATE_DIR/test_execution.json"
+fi
+
+# Save process info
+ps aux | grep -E "(one-engine|engine)" | grep -v grep > "$STATE_DIR/processes.txt" || echo "No engine processes" > "$STATE_DIR/processes.txt"
+
+# Save port usage
+lsof -nPiTCP -sTCP:LISTEN > "$STATE_DIR/ports.txt" 2>/dev/null || echo "No port info" > "$STATE_DIR/ports.txt"
+
+echo "📁 State saved to: $STATE_DIR"
+echo "📋 Contents:"
+ls -la "$STATE_DIR"

@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+set -eu
+DIR="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+ENV="$DIR/.oneengine/ports.env"
+[ -f "$ENV" ] || "$DIR/bin/write_ports" >/dev/null 2>&1 || true
+. "$ENV"
+URL="${ENGINE_URL:-http://127.0.0.1:8080}"
+host="${URL#http://}"; host="${host#https://}"
+port="${host##*:}"; host="${host%:*}"
+
+echo "== Engine endpoint: $URL"
+if command -v nc >/dev/null 2>&1 && nc -z "$host" "$port" 2>/dev/null; then
+  echo " - Port listening: YES ($host:$port)"
+else
+  echo " - Port listening: NO ($host:$port)"
+fi
+status_ui=$(curl -s -o /dev/null -w "%{http_code} %{time_total}" "$URL/" || echo "ERR 0")
+status_tau=$(curl -s -o /dev/null -w "%{http_code} %{time_total}" -X POST -H content-type:application/json -d "{}" "$URL/tau" || echo "ERR 0")
+echo " - GET /         → $status_ui   (http_code, seconds)"
+echo " - POST /tau     → $status_tau  (http_code, seconds)"
+
+echo "== LM fallback:"
+LM_URL="${LM_URL:-https://api.openai.com/v1/chat/completions}"
+MODEL="${MODEL:-gpt-4o-mini}"
+if [ -z "${LM_KEY:-}" ]; then
+  echo " - LM_KEY: MISSING (export LM_KEY=... to enable fallback)"
+else
+  code=$(curl -s -o /dev/null -w "%{http_code}" -H "authorization: Bearer $LM_KEY" -H content-type:application/json \
+    -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":1,\"temperature\":0}" \
+    "$LM_URL" || true)
+  echo " - LM test (≈1 token) → HTTP $code at $LM_URL"
+fi

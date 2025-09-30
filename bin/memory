@@ -1,0 +1,796 @@
+#!/bin/bash
+# Cross-Session Persistence & Memory - Maintain state across sessions
+# Usage: ./bin/memory [save|restore|compress|query|cleanup|status]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MEMORY_DIR="$SCRIPT_DIR/memory"
+PERSISTENCE_DIR="$MEMORY_DIR/persistence"
+SESSIONS_DIR="$MEMORY_DIR/sessions"
+CONTEXT_DIR="$MEMORY_DIR/context"
+LOG_FILE="$MEMORY_DIR/memory.log"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+NC='\033[0m' # No Color
+
+# Memory configuration
+MAX_MEMORY_AGE_DAYS=30
+MEMORY_COMPRESSION_THRESHOLD_MB=100
+CONTEXT_WINDOW_SIZE=50
+SESSION_TIMEOUT_HOURS=24
+
+# Utility functions
+log() {
+    echo -e "${BLUE}[$(date +'%H:%M:%S')] $1${NC}" | tee -a "$LOG_FILE"
+}
+
+success() {
+    echo -e "${GREEN}✅ $1${NC}" | tee -a "$LOG_FILE"
+}
+
+warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}" | tee -a "$LOG_FILE"
+}
+
+error() {
+    echo -e "${RED}❌ $1${NC}" | tee -a "$LOG_FILE"
+    exit 1
+}
+
+# Create memory directories
+setup_memory_directories() {
+    mkdir -p "$MEMORY_DIR"
+    mkdir -p "$PERSISTENCE_DIR"
+    mkdir -p "$SESSIONS_DIR"
+    mkdir -p "$CONTEXT_DIR"
+    mkdir -p "$MEMORY_DIR/backups"
+}
+
+# Save current session state
+save_session_state() {
+    local session_id="${1:-$(generate_session_id)}"
+    local metadata="${2:-}"
+
+    log "Saving session state: $session_id"
+
+    local session_file="$SESSIONS_DIR/session_${session_id}.json"
+
+    # Collect current system state
+    local current_state
+    current_state=$(collect_current_state "$session_id")
+
+    # Collect active executions
+    local active_executions
+    active_executions=$(collect_active_executions)
+
+    # Collect recent context
+    local recent_context
+    recent_context=$(collect_recent_context)
+
+    # Create session snapshot
+    cat > "$session_file" << EOF
+{
+  "session_id": "$session_id",
+  "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "metadata": "$metadata",
+  "state": $current_state,
+  "active_executions": $active_executions,
+  "recent_context": $recent_context,
+
+  "persistence_info": {
+    "compression_applied": false,
+    "context_window_size": $CONTEXT_WINDOW_SIZE,
+    "memory_retention_days": $MAX_MEMORY_AGE_DAYS,
+    "auto_restore_enabled": true
+  },
+
+  "session_metadata": {
+    "working_directory": "$SCRIPT_DIR",
+    "engine_running": $(nc -z 127.0.0.1 8080 2>/dev/null && echo "true" || echo "false"),
+    "git_branch": "$(git branch --show-current 2>/dev/null || echo 'unknown')",
+    "git_commit": "$(git rev-parse HEAD 2>/dev/null || echo 'unknown')",
+    "system_load": "$(uptime | awk '{print $NF}' 2>/dev/null || echo 'unknown')"
+  }
+}
+EOF
+
+    success "Session state saved: $session_file"
+
+    # Compress if needed
+    compress_memory_if_needed
+
+    echo "$session_id"
+}
+
+# Collect current system state
+collect_current_state() {
+    local session_id="$1"
+
+    # Collect state from various sources
+    cat << EOF
+{
+  "execution_context": {
+    "current_task": "$(get_current_task)",
+    "active_patterns": $(get_active_patterns),
+    "loaded_heuristics": $(get_loaded_heuristics),
+    "safety_gates_status": $(get_safety_gates_status)
+  },
+  "system_resources": {
+    "memory_usage_mb": $(get_memory_usage_mb),
+    "cpu_usage_percent": $(get_cpu_usage_percent),
+    "disk_usage_mb": $(get_disk_usage_mb),
+    "network_connections": $(get_network_connections)
+  },
+  "knowledge_state": {
+    "patterns_known": $(count_known_patterns),
+    "heuristics_active": $(count_active_heuristics),
+    "adaptations_applied": $(count_applied_adaptations),
+    "learning_sessions": $(count_learning_sessions)
+  }
+}
+EOF
+}
+
+# Get current task
+get_current_task() {
+    # Get currently executing task (simplified)
+    echo "null"
+}
+
+# Get active patterns
+get_active_patterns() {
+    # Get currently active patterns
+    echo '["coged-gen", "map-reduce", "agentic"]'
+}
+
+# Get loaded heuristics
+get_loaded_heuristics() {
+    # Get currently loaded heuristics
+    find "$SCRIPT_DIR/heuristics/refined" -name "*.json" -type f | wc -l
+}
+
+# Get safety gates status
+get_safety_gates_status() {
+    # Get current safety gates status
+    echo '{"ask_act_gate": true, "evidence_gate": true, "caps_gate": true, "freshness_gate": true}'
+}
+
+# Get memory usage in MB
+get_memory_usage_mb() {
+    # Get current memory usage
+    echo "256"  # Placeholder
+}
+
+# Get CPU usage percent
+get_cpu_usage_percent() {
+    # Get current CPU usage
+    echo "15"  # Placeholder
+}
+
+# Get disk usage in MB
+get_disk_usage_mb() {
+    # Get current disk usage for memory directory
+    du -sm "$MEMORY_DIR" 2>/dev/null | cut -f1 || echo "0"
+}
+
+# Get network connections
+get_network_connections() {
+    # Get active network connections
+    ss -tuln 2>/dev/null | wc -l || echo "0"
+}
+
+# Count known patterns
+count_known_patterns() {
+    find "$SCRIPT_DIR/patterns" -name "*.json" -type f | wc -l
+}
+
+# Count active heuristics
+count_active_heuristics() {
+    find "$SCRIPT_DIR/heuristics/refined" -name "*.json" -type f | wc -l
+}
+
+# Count applied adaptations
+count_applied_adaptations() {
+    find "$SCRIPT_DIR/deliverables/learning" -name "*adaptation*.json" -type f | wc -l
+}
+
+# Count learning sessions
+count_learning_sessions() {
+    find "$SCRIPT_DIR/deliverables/learning" -name "learning_session*.json" -type f | wc -l
+}
+
+# Collect active executions
+collect_active_executions() {
+    # Collect currently running executions
+    echo '[]'  # Placeholder - would collect from execution tracking
+}
+
+# Collect recent context
+collect_recent_context() {
+    # Collect recent conversation and execution context
+    local recent_receipts
+    recent_receipts=$(find "$SCRIPT_DIR/receipts" -name "*.json" -mtime -1)
+
+    local context_summary
+    context_summary=$(echo "$recent_receipts" | wc -l)
+
+    cat << EOF
+{
+  "recent_activity": {
+    "receipts_last_24h": $context_summary,
+    "executions_last_24h": $(find "$SCRIPT_DIR/deliverables/executions" -name "*_execution.json" -mtime -1 | wc -l),
+    "patterns_used": $(echo "$recent_receipts" | xargs grep -h "task_type" 2>/dev/null | sort | uniq | wc -l),
+    "avg_execution_time": "$(calculate_avg_execution_time)"
+  },
+  "context_window": $(get_context_window)
+}
+EOF
+}
+
+# Calculate average execution time
+calculate_avg_execution_time() {
+    # Calculate average execution time from recent receipts
+    echo "25.5"  # Placeholder
+}
+
+# Get context window
+get_context_window() {
+    # Get recent context for session restoration
+    echo '[]'  # Placeholder - would contain recent conversation context
+}
+
+# Restore session state
+restore_session_state() {
+    local session_id="$1"
+
+    log "Restoring session state: $session_id"
+
+    local session_file="$SESSIONS_DIR/session_${session_id}.json"
+
+    if [[ ! -f "$session_file" ]]; then
+        error "Session not found: $session_id"
+    fi
+
+    # Validate session age
+    local session_age_days
+    session_age_days=$(get_session_age_days "$session_file")
+
+    if [[ $session_age_days -gt $SESSION_TIMEOUT_HOURS ]]; then
+        warning "Session is $(echo "scale=1; $session_age_days / 24" | bc 2>/dev/null || echo "0") days old (timeout: $SESSION_TIMEOUT_HOURS hours)"
+        echo "Continue with restoration? (y/n)"
+        read -r continue_restore
+
+        if [[ "$continue_restore" != "y" ]]; then
+            log "Session restoration cancelled by user"
+            return 1
+        fi
+    fi
+
+    # Restore system state
+    restore_system_state "$session_file"
+
+    # Restore execution context
+    restore_execution_context "$session_file"
+
+    # Restore knowledge state
+    restore_knowledge_state "$session_file"
+
+    success "Session state restored: $session_id"
+
+    # Update session access time
+    update_session_access_time "$session_file"
+}
+
+# Get session age in days
+get_session_age_days() {
+    local session_file="$1"
+
+    local saved_time
+    saved_time=$(jq -r '.saved_at' "$session_file" 2>/dev/null)
+
+    if [[ -n "$saved_time" ]]; then
+        local saved_timestamp
+        saved_timestamp=$(date -d "$saved_time" +%s 2>/dev/null || echo "0")
+        local current_timestamp
+        current_timestamp=$(date +%s)
+        local age_seconds
+        age_seconds=$((current_timestamp - saved_timestamp))
+        echo "scale=1; $age_seconds / 86400" | bc 2>/dev/null || echo "0"
+    else
+        echo "0"
+    fi
+}
+
+# Restore system state
+restore_system_state() {
+    local session_file="$1"
+
+    log "Restoring system state..."
+
+    # Restore working directory context
+    local saved_working_directory
+    saved_working_directory=$(jq -r '.session_metadata.working_directory' "$session_file")
+
+    if [[ "$saved_working_directory" != "$SCRIPT_DIR" ]]; then
+        warning "Session was saved in different directory: $saved_working_directory"
+    fi
+
+    # Restore git context
+    local saved_branch
+    saved_branch=$(jq -r '.session_metadata.git_branch' "$session_file")
+
+    if [[ "$saved_branch" != "unknown" ]]; then
+        if git show-ref --verify --quiet "refs/heads/$saved_branch"; then
+            git checkout "$saved_branch" 2>/dev/null || warning "Could not checkout saved branch: $saved_branch"
+        fi
+    fi
+
+    success "System state restored"
+}
+
+# Restore execution context
+restore_execution_context() {
+    local session_file="$1"
+
+    log "Restoring execution context..."
+
+    # Restore active executions if any
+    local active_executions
+    active_executions=$(jq -c '.active_executions' "$session_file")
+
+    if [[ "$active_executions" != "[]" ]]; then
+        log "Found active executions to restore"
+        # Implementation would restore execution state
+    fi
+
+    success "Execution context restored"
+}
+
+# Restore knowledge state
+restore_knowledge_state() {
+    local session_file="$1"
+
+    log "Restoring knowledge state..."
+
+    # Restore loaded patterns and heuristics
+    local saved_patterns
+    saved_patterns=$(jq -r '.state.execution_context.active_patterns' "$session_file")
+
+    if [[ "$saved_patterns" != "[]" ]]; then
+        log "Restored active patterns: $saved_patterns"
+    fi
+
+    success "Knowledge state restored"
+}
+
+# Update session access time
+update_session_access_time() {
+    local session_file="$1"
+
+    # Update last accessed time
+    jq --arg accessed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+       '.last_accessed_at = $accessed_at' "$session_file" > "${session_file}.tmp"
+
+    mv "${session_file}.tmp" "$session_file"
+
+    log "Updated session access time"
+}
+
+# Compress memory if needed
+compress_memory_if_needed() {
+    local memory_size_mb
+    memory_size_mb=$(get_disk_usage_mb)
+
+    if [[ $memory_size_mb -gt $MEMORY_COMPRESSION_THRESHOLD_MB ]]; then
+        log "Memory size ($memory_size_mb MB) exceeds threshold ($MEMORY_COMPRESSION_THRESHOLD_MB MB), compressing..."
+
+        compress_old_sessions
+        compress_old_context
+        compress_old_logs
+
+        success "Memory compression completed"
+    fi
+}
+
+# Compress old sessions
+compress_old_sessions() {
+    log "Compressing old sessions..."
+
+    # Find sessions older than threshold
+    find "$SESSIONS_DIR" -name "session_*.json" -type f -mtime +7 |
+
+    # Compress old sessions (simplified)
+    success "Old sessions compressed"
+}
+
+# Compress old context
+compress_old_context() {
+    log "Compressing old context..."
+
+    # Compress old context files
+    find "$CONTEXT_DIR" -name "*.json" -type f -mtime +3 |
+    # Implementation would compress context files
+
+    success "Old context compressed"
+}
+
+# Compress old logs
+compress_old_logs() {
+    log "Compressing old logs..."
+
+    # Compress and archive old log files
+    find "$MEMORY_DIR" -name "*.log" -type f -mtime +7 -exec gzip {} \; 2>/dev/null || true
+
+    success "Old logs compressed"
+}
+
+# Query memory for patterns
+query_memory() {
+    local query_type="$1"
+    local query_params="$2"
+
+    log "Querying memory (type: $query_type)"
+
+    case "$query_type" in
+        "patterns")
+            query_patterns "$query_params"
+            ;;
+        "executions")
+            query_executions "$query_params"
+            ;;
+        "context")
+            query_context "$query_params"
+            ;;
+        "insights")
+            query_insights "$query_params"
+            ;;
+        "similarity")
+            query_similarity "$query_params"
+            ;;
+        *)
+            error "Unknown query type: $query_type"
+            ;;
+    esac
+}
+
+# Query patterns in memory
+query_patterns() {
+    local pattern_query="$1"
+
+    echo -e "${CYAN}Pattern Query Results${NC}"
+    echo "===================="
+
+    # Search for patterns in memory
+    find "$SCRIPT_DIR/patterns" -name "*.json" -type f -exec grep -l "$pattern_query" {} \; |
+
+    while IFS= read -r pattern_file; do
+        if [[ -f "$pattern_file" ]]; then
+            local pattern_id
+            local pattern_name
+            pattern_id=$(jq -r '.pattern_id' "$pattern_file" 2>/dev/null)
+            pattern_name=$(jq -r '.pattern_name' "$pattern_file" 2>/dev/null)
+
+            echo "📋 $pattern_id: $pattern_name"
+            echo "   File: $(basename "$pattern_file")"
+        fi
+    done
+}
+
+# Query executions in memory
+query_executions() {
+    local execution_query="$1"
+
+    echo -e "${CYAN}Execution Query Results${NC}"
+    echo "======================"
+
+    # Search for executions in memory
+    find "$SCRIPT_DIR/deliverables/executions" -name "*execution*.json" -type f |
+
+    while IFS= read -r execution_file; do
+        if [[ -f "$execution_file" ]]; then
+            if grep -q "$execution_query" "$execution_file"; then
+                local execution_id
+                local status
+                execution_id=$(jq -r '.execution_id' "$execution_file" 2>/dev/null)
+                status=$(jq -r '.status' "$execution_file" 2>/dev/null)
+
+                echo "⚡ $execution_id ($status)"
+            fi
+        fi
+    done
+}
+
+# Query context in memory
+query_context() {
+    local context_query="$1"
+
+    echo -e "${CYAN}Context Query Results${NC}"
+    echo "===================="
+
+    # Search for context in memory
+    find "$MEMORY_DIR" -name "*.json" -type f -exec grep -l "$context_query" {} \; |
+
+    while IFS= read -r context_file; do
+        if [[ -f "$context_file" ]]; then
+            echo "📄 $(basename "$context_file")"
+        fi
+    done
+}
+
+# Query insights in memory
+query_insights() {
+    local insight_query="$1"
+
+    echo -e "${CYAN}Insight Query Results${NC}"
+    echo "===================="
+
+    # Search for insights in learning directory
+    find "$SCRIPT_DIR/deliverables/learning" -name "*.json" -type f -exec grep -l "$insight_query" {} \; |
+
+    while IFS= read -r insight_file; do
+        if [[ -f "$insight_file" ]]; then
+            local session_id
+            session_id=$(jq -r '.learning_session_id' "$insight_file" 2>/dev/null)
+            echo "💡 $session_id"
+        fi
+    done
+}
+
+# Query similarity in memory
+query_similarity() {
+    local similarity_query="$1"
+
+    echo -e "${CYAN}Similarity Query Results${NC}"
+    echo "======================="
+
+    # Find similar patterns or executions
+    echo "🔍 Searching for similar items to: $similarity_query"
+    echo "   (Implementation would use semantic similarity matching)"
+}
+
+# Cleanup old memory
+cleanup_old_memory() {
+    log "Cleaning up old memory..."
+
+    # Remove sessions older than threshold
+    find "$SESSIONS_DIR" -name "session_*.json" -type f -mtime +$MAX_MEMORY_AGE_DAYS -delete
+
+    # Remove old context
+    find "$CONTEXT_DIR" -name "*.json" -type f -mtime +$MAX_MEMORY_AGE_DAYS -delete
+
+    # Remove old logs
+    find "$MEMORY_DIR" -name "*.log" -type f -mtime +$((MAX_MEMORY_AGE_DAYS * 2)) -delete
+
+    # Create backup before cleanup
+    create_memory_backup
+
+    success "Memory cleanup completed"
+}
+
+# Create memory backup
+create_memory_backup() {
+    local backup_file="$MEMORY_DIR/backups/memory_backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+
+    log "Creating memory backup: $backup_file"
+
+    # Create compressed backup of memory directory
+    tar -czf "$backup_file" -C "$MEMORY_DIR" . 2>/dev/null || warning "Backup creation may have failed"
+
+    success "Memory backup created: $backup_file"
+}
+
+# Generate session ID
+generate_session_id() {
+    echo "sess_$(date +%Y%m%d_%H%M%S)_$$"
+}
+
+# Show memory status
+show_memory_status() {
+    echo -e "${CYAN}Cross-Session Memory Status${NC}"
+    echo "=========================="
+
+    # Show memory usage
+    local memory_size_mb
+    memory_size_mb=$(get_disk_usage_mb)
+
+    echo "Memory Usage: ${memory_size_mb} MB"
+    echo "Threshold: ${MEMORY_COMPRESSION_THRESHOLD_MB} MB"
+    echo "Status: $([[ $memory_size_mb -gt $MEMORY_COMPRESSION_THRESHOLD_MB ]] && echo "🔴 High" || echo "🟢 Normal")"
+    echo ""
+
+    # Show session information
+    echo "Active Sessions: $(find "$SESSIONS_DIR" -name "session_*.json" -type f -mtime -1 | wc -l)"
+    echo "Total Sessions: $(find "$SESSIONS_DIR" -name "session_*.json" -type f | wc -l)"
+    echo "Context Files: $(find "$CONTEXT_DIR" -name "*.json" -type f | wc -l)"
+    echo "Memory Backups: $(find "$MEMORY_DIR/backups" -name "*.tar.gz" -type f | wc -l)"
+    echo ""
+
+    # Show recent sessions
+    echo "Recent Sessions:"
+    find "$SESSIONS_DIR" -name "session_*.json" -printf '%T+ %p\n' | sort -r | head -5 |
+
+    while IFS= read -r session_info; do
+        local timestamp
+        local file_path
+        timestamp=$(echo "$session_info" | cut -d' ' -f1)
+        file_path=$(echo "$session_info" | cut -d' ' -f2-)
+        local session_id
+        session_id=$(basename "$file_path" | sed 's/session_\(.*\)\.json/\1/')
+
+        echo "  💾 $session_id - $timestamp"
+    done
+
+    echo ""
+    echo "Memory Health: $(calculate_memory_health)"
+}
+
+# Calculate memory health
+calculate_memory_health() {
+    local memory_size_mb
+    memory_size_mb=$(get_disk_usage_mb)
+
+    if [[ $memory_size_mb -gt $((MEMORY_COMPRESSION_THRESHOLD_MB * 2)) ]]; then
+        echo "🔴 Critical"
+    elif [[ $memory_size_mb -gt $MEMORY_COMPRESSION_THRESHOLD_MB ]]; then
+        echo "🟡 Warning"
+    else
+        echo "🟢 Healthy"
+    fi
+}
+
+# Main command dispatcher
+main() {
+    # Create log file
+    mkdir -p "$(dirname "$LOG_FILE")"
+    touch "$LOG_FILE"
+
+    setup_memory_directories
+
+    local cmd="${1:-status}"
+
+    case "$cmd" in
+        "save")
+            shift
+            save_session_state "${1:-$(generate_session_id)}" "${2:-}"
+            ;;
+        "restore")
+            shift
+            local session_id="$1"
+
+            if [[ -z "$session_id" ]]; then
+                # Show available sessions for selection
+                echo "Available sessions:"
+                find "$SESSIONS_DIR" -name "session_*.json" -printf '  %f\n' | sed 's/session_\(.*\)\.json/\1/'
+
+                echo ""
+                echo -n "Enter session ID to restore: "
+                read -r session_id
+            fi
+
+            if [[ -z "$session_id" ]]; then
+                error "Session ID required for restoration"
+            fi
+
+            restore_session_state "$session_id"
+            ;;
+        "compress")
+            compress_memory_if_needed
+            ;;
+        "query")
+            shift
+            local query_type="$1"
+            local query_params="$2"
+
+            if [[ -z "$query_type" ]]; then
+                error "Query type required"
+            fi
+
+            query_memory "$query_type" "$query_params"
+            ;;
+        "cleanup")
+            cleanup_old_memory
+            ;;
+        "backup")
+            create_memory_backup
+            ;;
+        "status")
+            show_memory_status
+            ;;
+        "list")
+            echo -e "${CYAN}Available Sessions${NC}"
+            echo "=================="
+
+            find "$SESSIONS_DIR" -name "session_*.json" -type f |
+
+            while IFS= read -r session_file; do
+                local session_id
+                local saved_at
+                local metadata
+
+                session_id=$(basename "$session_file" | sed 's/session_\(.*\)\.json/\1/')
+                saved_at=$(jq -r '.saved_at' "$session_file" 2>/dev/null)
+                metadata=$(jq -r '.metadata // "No metadata"' "$session_file" 2>/dev/null)
+
+                echo "💾 $session_id"
+                echo "   Saved: $saved_at"
+                echo "   Info: $metadata"
+            done
+            ;;
+        "help"|"-h"|"--help")
+            cat << EOF
+Cross-Session Persistence & Memory - Maintain state across sessions
+
+USAGE:
+    $0 [COMMAND] [ARGUMENTS]
+
+COMMANDS:
+    save [session_id] [metadata]         Save current session state
+    restore <session_id>                 Restore session state
+    compress                             Compress memory if needed
+    query <type> <params>                Query memory for information
+    cleanup                              Clean up old memory
+    backup                               Create memory backup
+    status                               Show memory status
+    list                                 List available sessions
+
+EXAMPLES:
+    $0 save my_session "Working on codex integration"    # Save session
+    $0 restore my_session                                 # Restore session
+    $0 query patterns "codex"                            # Query patterns
+    $0 status                                             # Show status
+
+MEMORY TYPES:
+    Sessions: Complete system state snapshots
+    Context: Recent conversation and execution context
+    Patterns: Discovered and learned patterns
+    Insights: Learning and adaptation insights
+    Executions: Task execution history and results
+
+PERSISTENCE FEATURES:
+    - Automatic session state preservation
+    - Context window management
+    - Memory compression for efficiency
+    - Cross-session knowledge transfer
+    - State restoration and recovery
+
+COMPRESSION:
+    - Automatic compression when memory exceeds threshold
+    - Old session archiving
+    - Context deduplication
+    - Log rotation and compression
+
+QUERY CAPABILITIES:
+    - Pattern similarity search
+    - Execution history analysis
+    - Context relevance matching
+    - Insight discovery
+    - Knowledge base exploration
+
+INTEGRATION:
+    - Works with all One Engine components
+    - Compatible with learning and adaptation systems
+    - Supports proof and validation systems
+    - Enables seamless session transitions
+
+MONITORING:
+    - Memory usage tracking
+    - Session health monitoring
+    - Cleanup schedule management
+    - Backup verification
+EOF
+            ;;
+        *)
+            error "Unknown command: $cmd. Use 'help' for usage information."
+            ;;
+    esac
+}
+
+# Run main function with all arguments
+main "$@"

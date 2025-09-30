@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+set -eu
+D="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+S="$(
+;2D;2B;2D  (git -C "$D" rev-parse --short HEAD 2>/dev/null) \
+  || (shasum -a 256 "$D/.oneengine/themes.txt" 2>/dev/null | awk "{print \$1}") \
+  || (sha256sum "$D/.oneengine/themes.txt" | awk "{print \$1}")
+)"
+printf "+------------------------------------------------------------+\n"
+printf "| RULIAD THEMES  T1..T6  | theme-sig: %s |\n" "$S"
+printf "| preview<=apply | least-priv | provenance | contract->select |\n"
+printf "| selfmod-as-proposal | tau single endpoint                   |\n"
+printf "+------------------------------------------------------------+\n"

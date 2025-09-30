@@ -1,0 +1,338 @@
+#!/bin/bash
+# Codex CLI - Drop-in code generation agent
+# Usage: codex "prompt" [language] [options]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENGINE_URL="http://127.0.0.1:8080"
+API_KEY="${ORCH_API_KEY:-meta2-dev-5b3fe4adda27ca19dab964f2}"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Utility functions
+log() {
+    echo -e "${BLUE}[$(date +'%H:%M:%S')] $1${NC}"
+}
+
+success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+error() {
+    echo -e "${RED}❌ $1${NC}"
+    exit 1
+}
+
+# Check if engine is running
+check_engine() {
+    if ! curl -s "$ENGINE_URL/healthz" > /dev/null 2>&1; then
+        warning "Engine not responding at $ENGINE_URL"
+        warning "Please ensure One Engine is running:"
+        echo "  cd $SCRIPT_DIR && ./bin/start"
+        return 1
+    fi
+    return 0
+}
+
+# Generate code using Codex agent
+generate_code() {
+    local prompt="$1"
+    local language="${2:-python}"
+    local output_file="${3:-}"
+
+    log "Generating code for: $prompt"
+
+    # Prepare request payload
+    local payload
+    payload=$(cat << EOF
+{
+  "prompt": "$prompt",
+  "language": "$language",
+  "project_context": {
+    "project_type": "cli",
+    "framework": ""
+  },
+  "requirements": {
+    "generate_tests": true,
+    "include_documentation": true,
+    "follow_style_guide": "$(get_style_guide "$language")",
+    "max_complexity": "medium"
+  },
+  "safety": {
+    "allow_network": false,
+    "allow_file_system": true,
+    "require_review": false,
+    "max_risk": "low"
+  }
+}
+EOF
+    )
+
+    # Make API request
+    local response
+    if ! response=$(curl -s -X POST "$ENGINE_URL/codex" \
+        -H "Content-Type: application/json" \
+        -H "X-API-Key: $API_KEY" \
+        -d "$payload" 2>&1); then
+        error "Failed to connect to engine at $ENGINE_URL"
+    fi
+
+    # Check for errors in response
+    if echo "$response" | grep -q '"status":"error"'; then
+        error "Engine returned error: $(echo "$response" | grep -o '"message":"[^"]*"' | cut -d'"' -f4)"
+    fi
+
+    # Extract generated code
+    local code
+    if ! code=$(echo "$response" | grep -o '"code":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\\n/\n/g'); then
+        error "Failed to extract code from response"
+    fi
+
+    # Extract explanation if available
+    local explanation
+    explanation=$(echo "$response" | grep -o '"explanation":"[^"]*"' | cut -d'"' -f4 | sed 's/\\n/\n/g' || echo "")
+
+    # Output results
+    if [[ -n "$output_file" ]]; then
+        echo "$code" > "$output_file"
+        success "Code generated and saved to: $output_file"
+
+        if [[ -n "$explanation" ]]; then
+            echo ""
+            echo -e "${CYAN}Explanation:${NC}"
+            echo "$explanation"
+        fi
+    else
+        echo -e "${CYAN}Generated Code:${NC}"
+        echo "$code"
+
+        if [[ -n "$explanation" ]]; then
+            echo ""
+            echo -e "${CYAN}Explanation:${NC}"
+            echo "$explanation"
+        fi
+    fi
+
+    # Extract and display files if present
+    local files
+    files=$(echo "$response" | grep -o '"files":\[[^]]*\]' || echo "")
+
+    if [[ -n "$files" && "$files" != "[]" ]]; then
+        echo ""
+        echo -e "${CYAN}Generated Files:${NC}"
+
+        # Extract file information
+        echo "$response" | grep -o '"name":"[^"]*","content":"[^"]*","type":"[^"]*"' | \
+        while IFS= read -r file_info; do
+            local file_name
+            local file_type
+            file_name=$(echo "$file_info" | grep -o '"name":"[^"]*"' | cut -d'"' -f4)
+            file_type=$(echo "$file_info" | grep -o '"type":"[^"]*"' | cut -d'"' -f4)
+
+            echo "  📄 $file_name ($file_type)"
+
+            if [[ "$file_name" == "test_"* ]] && [[ -z "$output_file" ]]; then
+                # Save test files automatically
+                local content
+                content=$(echo "$file_info" | grep -o '"content":"[^"]*"' | cut -d'"' -f4 | sed 's/\\n/\n/g')
+                echo "$content" > "$file_name"
+                success "Test file saved: $file_name"
+            fi
+        done
+    fi
+
+    # Show safety check results
+    local safety_passed
+    safety_passed=$(echo "$response" | grep -o '"passed":[^,]*' | cut -d':' -f2)
+
+    if [[ "$safety_passed" == "true" ]]; then
+        success "Safety checks passed"
+    else
+        warning "Safety concerns detected - please review generated code"
+        local concerns
+        concerns=$(echo "$response" | grep -o '"concerns":\[[^]]*\]' | sed 's/"concerns":\["\([^"]*\)"\]/\1/')
+        if [[ -n "$concerns" ]]; then
+            echo -e "${YELLOW}Concerns: $concerns${NC}"
+        fi
+    fi
+}
+
+# Get appropriate style guide for language
+get_style_guide() {
+    local lang="$1"
+    case "$lang" in
+        "python") echo "pep8" ;;
+        "javascript"|"typescript") echo "eslint" ;;
+        "rust") echo "rustfmt" ;;
+        "go") echo "gofmt" ;;
+        "java") echo "google-java-format" ;;
+        "cpp"|"c") echo "google-cpp-style" ;;
+        *) echo "standard" ;;
+    esac
+}
+
+# Interactive mode
+interactive_mode() {
+    echo -e "${CYAN}🎯 Codex Interactive Mode${NC}"
+    echo "Type your code generation requests. Type 'quit' or 'exit' to end."
+    echo ""
+
+    while true; do
+        echo -n "codex> "
+        read -r prompt
+
+        # Check for exit commands
+        case "$prompt" in
+            "quit"|"exit"|"q")
+                echo "Goodbye! 👋"
+                break
+                ;;
+            "help"|"?")
+                echo "Available commands:"
+                echo "  help          Show this help"
+                echo "  quit/exit/q   Exit interactive mode"
+                echo "  clear         Clear screen"
+                echo "  [any prompt]  Generate code"
+                echo ""
+                continue
+                ;;
+            "clear")
+                clear
+                continue
+                ;;
+            "")
+                continue
+                ;;
+        esac
+
+        # Generate code
+        generate_code "$prompt"
+        echo ""
+    done
+}
+
+# Show help
+show_help() {
+    cat << EOF
+Codex CLI - Drop-in code generation agent
+
+USAGE:
+    codex "prompt" [language] [output_file]
+    codex interactive
+    codex help
+
+EXAMPLES:
+    codex "Write a Python function to calculate fibonacci numbers"
+    codex "Create a REST API endpoint" javascript api.js
+    codex "Build a data structure for a binary tree" rust
+    codex interactive
+
+LANGUAGES SUPPORTED:
+    python, javascript, typescript, rust, go, java, cpp, csharp, php, ruby
+
+OPTIONS:
+    --engine URL        Engine URL (default: http://127.0.0.1:8080)
+    --api-key KEY       API key for authentication
+    --interactive, -i   Interactive mode
+    --help, -h          Show this help
+
+REQUIREMENTS:
+    - One Engine running on port 8080
+    - Network connectivity to engine
+    - Valid API key if authentication required
+
+OUTPUT:
+    Generated code is displayed to stdout and optionally saved to file.
+    Test files are automatically saved when detected.
+    Safety validation results are shown.
+
+EXAMPLES:
+    # Simple code generation
+    $ codex "Write a Python function to calculate fibonacci numbers"
+
+    # Save to file
+    $ codex "Create a REST API" javascript api.js
+
+    # Interactive mode
+    $ codex interactive
+
+    # Custom engine URL
+    $ codex --engine http://localhost:3000 "Generate code"
+EOF
+}
+
+# Main CLI logic
+main() {
+    # Parse arguments
+    local prompt=""
+    local language="python"
+    local output_file=""
+    local interactive=false
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --engine)
+                ENGINE_URL="$2"
+                shift 2
+                ;;
+            --api-key)
+                API_KEY="$2"
+                shift 2
+                ;;
+            --interactive|-i)
+                interactive=true
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            -*)
+                error "Unknown option: $1"
+                ;;
+            *)
+                if [[ -z "$prompt" ]]; then
+                    prompt="$1"
+                elif [[ -z "$language" ]] || [[ "$language" == "python" ]]; then
+                    language="$1"
+                elif [[ -z "$output_file" ]]; then
+                    output_file="$1"
+                else
+                    error "Too many arguments"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    # Validate inputs
+    if [[ -z "$prompt" ]] && [[ "$interactive" == false ]]; then
+        error "Prompt is required. Use 'codex help' for usage information."
+    fi
+
+    # Check engine connectivity
+    if ! check_engine; then
+        error "Cannot connect to engine. Please ensure One Engine is running."
+    fi
+
+    # Execute based on mode
+    if [[ "$interactive" == true ]]; then
+        interactive_mode
+    else
+        generate_code "$prompt" "$language" "$output_file"
+    fi
+}
+
+# Run main function with all arguments
+main "$@"

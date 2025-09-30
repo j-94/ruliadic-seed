@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+R="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+PORTS="$R/.oneengine/ports.env"
+[ -f "$PORTS" ] || "$R/bin/write_ports" >/dev/null
+. "$PORTS"
+URL="${ENGINE_URL:-http://127.0.0.1:8080}"
+code_ui=$(curl -s -o /dev/null -w "%{http_code}" "$URL/" || echo 000)
+code_tau=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{}" "$URL/tau" || echo 000)
+echo "UI : $([ "$code_ui" -ge 200 ] && echo OK || echo down) ($URL/ → $code_ui)"
+echo "τ  : $([ "$code_tau" -ge 200 ] && echo OK || echo down) ($URL/tau → $code_tau)"

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+PASS="${RULIAD_PASS:-GL2-pass-7b3f9f4c}"
+KEY="$(openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASS" -in .secrets/openrouter.key.enc)"
+exec curl -sS -H "Authorization: Bearer $KEY" "$@"

@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+set -eu
+DIR="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+ENV_FILE="$DIR/.oneengine/ports.env"
+VALS="$("$DIR/bin/inventory_select" || true)"
+if [ -z "${VALS:-}" ] || [ "$VALS" = "no-inventory" ]; then
+  : > "$ENV_FILE"
+  echo "ENGINE_URL=http://127.0.0.1:8080" >> "$ENV_FILE"
+  echo "UI_URL=http://127.0.0.1:8080" >> "$ENV_FILE"
+  echo "INVENTORY_SRC=" >> "$ENV_FILE"
+  echo "wrote default ports.env (no inventory found)"
+else
+  printf "%s\n" "$VALS" > "$ENV_FILE"
+  echo "wrote ports.env from repo_inventory.json"
+fi
+cat "$ENV_FILE"
