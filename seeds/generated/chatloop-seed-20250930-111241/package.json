@@ -1,0 +1,14 @@
+{
+  "name": "chatloop-seed-20250930-111241",
+  "version": "1.0.0",
+  "description": "ChatLoop injectable seed package for any system",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "bash deploy.sh",
+    "test": "node test.js"
+  },
+  "keywords": ["chatloop", "seed", "injectable", "interface"],
+  "author": "Ruliad-Seed System",
+  "license": "MIT"
+}
